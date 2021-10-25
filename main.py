@@ -28,6 +28,8 @@ products = pd.read_sql_query("select product from s1fieldstatistic;", db)
 products = products["product"].drop_duplicates()
 units = pd.read_sql_query("select unit from s1fieldstatistic;", db)
 units = units["unit"].drop_duplicates()
+acq_types = pd.read_sql_query("select acquisition from s1fieldstatistic;", db)
+acq_types = acq_types["acquisition"].drop_duplicates()
 
 # get single value selections from user
 aoi_selection = st.sidebar.selectbox("Select AOI", aoi_names)
@@ -35,11 +37,21 @@ year_selection = st.sidebar.selectbox("Select Year", years)
 product_selection = st.sidebar.selectbox("Select Product", products)
 unit_selection = st.sidebar.selectbox("Select Unit", units)
 
+st.sidebar.markdown('#')
+st.sidebar.header('Dependant Filters')
+
+# get list of multiselections from user
+acq_selection = tuple(st.sidebar.multiselect("Select Acquisition Mode", acq_types))
+
+# add placeholder to tuple of selections if len == 1 (prevents syntax error)
+if len(acq_selection) == 1:
+    acq_selection = acq_selection + ("placeholder",)
+
 CROP_TYPE_CODE = 'WW'
 #AOI = 'FRIEN'
 #YEAR = '2017'
 #PRODUCT = 'GRD'
-ACQ = 'A'
+#ACQ = 'A'
 POLARIS = 'VV'
 #UNIT = 'dB'
 FID = '36'
@@ -81,7 +93,7 @@ sql = f"""SELECT
     AND s1.aoi="{aoi_selection}"
     AND area.year="{year_selection}"
     AND s1.product="{product_selection}"
-    AND s1.acquisition="{ACQ}"
+    AND s1.acquisition IN {repr(acq_selection)}
     AND s1.polarization="{POLARIS}"
     AND s1.unit="{unit_selection}"
     AND area.fid="{FID}"
