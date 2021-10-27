@@ -1,16 +1,16 @@
 import streamlit as st
 import pandas as pd
-import sqlalchemy
 import sqlite3
 import altair
 
 # connection to db
 try:
-    db = sqlite3.connect('C:/Users/Markus Adam/Studium/GEO419/students_db_sql_queries/students_db_sql_queries/RCM_work.db')
+    db = sqlite3.connect(
+        'C:/Users/Markus Adam/Studium/GEO419/students_db_sql_queries/students_db_sql_queries/RCM_work.db')
     cursor = db.cursor()
-    print("Database created and Successfully Connected to SQLite")
+    print("Successfully Connected to SQLite Database")
 except sqlite3.Error as error:
-    print("Error while connecting to sqlite", error)
+    print("Error while connecting to Database", error)
 
 # create sider
 st.sidebar.title('Radar Crop Monitor APP')
@@ -20,44 +20,56 @@ st.sidebar.markdown('#')
 st.sidebar.header('Main Filters')
 
 # load values from specific table columns for value selection by user
-aoi_names = pd.read_sql_query('select aoi from areaofinterest;', db)
-aoi_names = aoi_names["aoi"].drop_duplicates()
-years = pd.read_sql_query("select year from areaofinterest;", db)
-years = years["year"].drop_duplicates()
-products = pd.read_sql_query("select product from s1fieldstatistic;", db)
-products = products["product"].drop_duplicates()
-units = pd.read_sql_query("select unit from s1fieldstatistic;", db)
-units = units["unit"].drop_duplicates()
-acq_types = pd.read_sql_query("select acquisition from s1fieldstatistic;", db)
-acq_types = acq_types["acquisition"].drop_duplicates()
+aoi_names = pd.read_sql_query('select distinct aoi from areaofinterest;', db)
+years = pd.read_sql_query("select distinct year from areaofinterest;", db)
+products = pd.read_sql_query("select distinct product from s1fieldstatistic;", db)
+units = pd.read_sql_query("select distinct unit from s1fieldstatistic;", db)
+acq_types = pd.read_sql_query("select distinct acquisition from s1fieldstatistic;", db)
+polarization = pd.read_sql_query("select distinct polarization from s1fieldstatistic;", db)
+stats = pd.read_sql_query("select distinct statistic from s1fieldstatistic;", db)
+fid = pd.read_sql_query("select distinct fid from areaofinterest;", db)
 
 # get single value selections from user
 aoi_selection = st.sidebar.selectbox("Select AOI", aoi_names)
 year_selection = st.sidebar.selectbox("Select Year", years)
 product_selection = st.sidebar.selectbox("Select Product", products)
 unit_selection = st.sidebar.selectbox("Select Unit", units)
+stat_selection = st.sidebar.selectbox("Select Statistic", stats)
 
 st.sidebar.markdown('#')
 st.sidebar.header('Dependant Filters')
 
 # get list of multiselections from user
 acq_selection = tuple(st.sidebar.multiselect("Select Acquisition Mode", acq_types))
+pol_selection = tuple(st.sidebar.multiselect("Select Polarization", polarization))
+fid_selection = tuple(st.sidebar.multiselect("Select FID", fid))
 
-# add placeholder to tuple of selections if len == 1 (prevents syntax error)
-if len(acq_selection) == 1:
-    acq_selection = acq_selection + ("placeholder",)
+
+# function to add placeholder to multiselection tuple if len == 1 (prevents syntax error)
+def placeholders(multiselections):
+    if len(multiselections) == 1:
+        multiselections = multiselections + ("placeholder",)
+        return multiselections
+    else:
+        return multiselections
+
+
+# apply placeholder function
+acq_selection = placeholders(acq_selection)
+pol_selection = placeholders(pol_selection)
+fid_selection = placeholders(fid_selection)
 
 CROP_TYPE_CODE = 'WW'
-#AOI = 'FRIEN'
-#YEAR = '2017'
-#PRODUCT = 'GRD'
-#ACQ = 'A'
-POLARIS = 'VV'
-#UNIT = 'dB'
-FID = '36'
-STATISTIC = 'median'
+# AOI = 'FRIEN'
+# YEAR = '2017'
+# PRODUCT = 'GRD'
+# ACQ = 'A'
+# POLARIS = 'VV'
+# UNIT = 'dB'
+# FID = '36'
+# STATISTIC = 'median'
 
-## define sql body
+# define sql body
 sql = f"""SELECT 
     round(s1.value, 2) as value, 
     s1.mask_label, 
@@ -94,35 +106,20 @@ sql = f"""SELECT
     AND area.year="{year_selection}"
     AND s1.product="{product_selection}"
     AND s1.acquisition IN {repr(acq_selection)}
-    AND s1.polarization="{POLARIS}"
+    AND s1.polarization IN {repr(pol_selection)}
     AND s1.unit="{unit_selection}"
-    AND area.fid="{FID}"
-    AND s1.statistic = "{STATISTIC}"
+    AND area.fid IN {repr(fid_selection)}
+    AND s1.statistic = "{stat_selection}"
     ORDER BY s1.mask_label, s1.datetime  ASC; """
 
 records = pd.read_sql(sql, db)
 
 st.dataframe(records)
 
-
-
-# # query all tables from DB
-# cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
-# all_tables = cursor.fetchall()
-# # conversion of list of tuples to list of strings
-# all_tables = [''.join(i) for i in all_tables]
-#
-# # make tables selectable
-# select_table = st.sidebar.selectbox('Select Table', all_tables)
-#
-# # display user-selected table
-# sql_query = "SELECT * FROM {}".format(select_table)
-# selected_table = pd.read_sql_query(sql_query, db)
-# st.dataframe(selected_table)
-
 # chart
 charttable = records[["datetime", "value"]]
-chart = altair.Chart(charttable).mark_circle().encode(x= "datetime", y="value")
+chart = altair.Chart(charttable).mark_circle().encode(x="datetime", y="value")
 st.altair_chart(chart)
+
 cursor.close()
 db.close()
