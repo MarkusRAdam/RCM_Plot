@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import sqlite3
-import altair
+import altair as alt
 
 # connection to db
 try:
@@ -32,12 +32,12 @@ fid = pd.read_sql_query("select distinct fid from areaofinterest;", db)
 # get single value selections from user
 aoi_selection = st.sidebar.selectbox("Select AOI", aoi_names)
 year_selection = st.sidebar.selectbox("Select Year", years)
-product_selection = st.sidebar.selectbox("Select Product", products)
+product_selection = st.sidebar.selectbox("Select Product Level", products)
 unit_selection = st.sidebar.selectbox("Select Unit", units)
 stat_selection = st.sidebar.selectbox("Select Statistic", stats)
 
 st.sidebar.markdown('#')
-st.sidebar.header('Dependant Filters')
+st.sidebar.header('Dependent Filters')
 
 # get list of multiselections from user
 acq_selection = tuple(st.sidebar.multiselect("Select Acquisition Mode", acq_types))
@@ -117,9 +117,12 @@ records = pd.read_sql(sql, db)
 st.dataframe(records)
 
 # chart
-charttable = records[["datetime", "value"]]
-chart = altair.Chart(charttable).mark_circle().encode(x="datetime", y="value")
-st.altair_chart(chart)
+selection = alt.selection_multi(fields=['acquisition'], bind='legend')
+chart = alt.Chart(records).mark_circle().encode(
+    x="datetime", y="value", color=alt.condition(
+        selection, "acquisition", alt.value("lightgray")),
+    opacity=alt.condition(selection, alt.value(1), alt.value(0.2))).add_selection(selection)
+st.altair_chart(chart, use_container_width=True)
 
 cursor.close()
 db.close()
