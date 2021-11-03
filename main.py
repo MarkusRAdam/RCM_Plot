@@ -114,6 +114,21 @@ sql = f"""SELECT
 
 records = pd.read_sql(sql, db)
 
+# create sliders for time frame selection (start and end date of time series plots)
+# convert datetime string column to datetime
+records["datetime"] = pd.to_datetime(records["datetime"])
+records["datetime"] = pd.to_datetime(records['datetime']).apply(lambda x: x.date())
+
+# get earliest and latest date from dataset as boundaries for slider
+start_date = records["datetime"].min()
+end_date = records["datetime"].max()
+
+# define slider values from user selection
+slider_1, slider_2 = st.slider('Select date range', value=(start_date, end_date), format="MM/DD/YY - hh:mm:ss")
+
+# filter dataframe based on slider values
+records = records[(records['datetime'] > slider_1) & (records['datetime'] < slider_2)]
+
 st.dataframe(records)
 
 # chart
