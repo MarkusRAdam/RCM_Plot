@@ -59,7 +59,7 @@ acq_selection = placeholders(acq_selection)
 pol_selection = placeholders(pol_selection)
 fid_selection = placeholders(fid_selection)
 
-CROP_TYPE_CODE = 'WW'
+# CROP_TYPE_CODE = 'WW'
 # AOI = 'FRIEN'
 # YEAR = '2017'
 # PRODUCT = 'GRD'
@@ -101,8 +101,7 @@ sql = f"""SELECT
     ON (crop.crop_type_code = areaofinterest.crop_type_code)) area
     ON (s1.mask_label = area.fid AND strftime('%Y', s1.datetime)=area.year AND s1.aoi = area.aoi)
     WHERE 
-    area.crop_type_code = "{CROP_TYPE_CODE}"
-    AND s1.aoi="{aoi_selection}"
+    s1.aoi="{aoi_selection}"
     AND area.year="{year_selection}"
     AND s1.product="{product_selection}"
     AND s1.acquisition IN {repr(acq_selection)}
@@ -131,13 +130,23 @@ records = records[(records['datetime'] > slider_1) & (records['datetime'] < slid
 
 st.dataframe(records)
 
-# chart
-selection = alt.selection_multi(fields=['acquisition'], bind='legend')
-chart = alt.Chart(records).mark_circle().encode(
-    x="datetime", y="value", color=alt.condition(
-        selection, "acquisition", alt.value("lightgray")),
-    opacity=alt.condition(selection, alt.value(1), alt.value(0.2))).add_selection(selection)
-st.altair_chart(chart, use_container_width=True)
+# define chart function
+def chart_maker(records, croptype):
+    selection = alt.selection_multi(fields=['acquisition'], bind='legend')
+    chart = alt.Chart(records).mark_circle().encode(
+        x="datetime", y="value", color=alt.condition(
+            selection, "acquisition", alt.value("lightgray")),
+        opacity=alt.condition(selection, alt.value(1), alt.value(0.2))).add_selection(selection).\
+        properties(title=croptype)
+    return st.altair_chart(chart, use_container_width=True)
+
+
+# plot chart for each croptype
+croptypes = records["crop_type"].unique()
+for croptype in croptypes:
+    records = records[records["crop_type"] == croptype]
+    chart_maker(records, croptype)
+
 
 cursor.close()
 db.close()
