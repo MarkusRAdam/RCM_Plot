@@ -22,6 +22,7 @@ st.sidebar.header('Main Filters')
 # load values from specific table columns for value selection by user
 aoi_names = pd.read_sql_query('select distinct aoi from areaofinterest;', db)
 years = pd.read_sql_query("select distinct year from areaofinterest;", db)
+crop_types = pd.read_sql_query("select distinct crop_type from croplegend;", db)
 products = pd.read_sql_query("select distinct product from s1fieldstatistic;", db)
 units = pd.read_sql_query("select distinct unit from s1fieldstatistic;", db)
 acq_types = pd.read_sql_query("select distinct acquisition from s1fieldstatistic;", db)
@@ -32,6 +33,7 @@ fid = pd.read_sql_query("select distinct fid from areaofinterest;", db)
 # get single value selections from user
 aoi_selection = st.sidebar.selectbox("Select AOI", aoi_names)
 year_selection = st.sidebar.selectbox("Select Year", years)
+crop_selection = st.sidebar.selectbox("Select Crop Type", crop_types)
 product_selection = st.sidebar.selectbox("Select Product Level", products)
 unit_selection = st.sidebar.selectbox("Select Unit", units)
 stat_selection = st.sidebar.selectbox("Select Statistic", stats)
@@ -102,6 +104,7 @@ sql = f"""SELECT
     ON (s1.mask_label = area.fid AND strftime('%Y', s1.datetime)=area.year AND s1.aoi = area.aoi)
     WHERE 
     s1.aoi="{aoi_selection}"
+    AND area.crop_type="{crop_selection}"
     AND area.year="{year_selection}"
     AND s1.product="{product_selection}"
     AND s1.acquisition IN {repr(acq_selection)}
@@ -130,23 +133,39 @@ records = records[(records['datetime'] > slider_1) & (records['datetime'] < slid
 
 st.dataframe(records)
 
-# define chart function
-def chart_maker(records, croptype):
-    selection = alt.selection_multi(fields=['acquisition'], bind='legend')
-    chart = alt.Chart(records).mark_circle().encode(
-        x="datetime", y="value", color=alt.condition(
-            selection, "acquisition", alt.value("lightgray")),
-        opacity=alt.condition(selection, alt.value(1), alt.value(0.2))).add_selection(selection).\
-        properties(title=croptype)
-    return st.altair_chart(chart, use_container_width=True)
+# filter records by polarisation/value for different plots
+vv_records = records[records["parameter"] == "VV"]
+vh_records = records[records["parameter"] == "VH"]
+ndvi_records = records[records["parameter"] == "NDVI"]
 
+# set columns for values to be colored by
+selection = alt.selection_multi(fields=['acquisition'], bind='legend')
 
-# plot chart for each croptype
-croptypes = records["crop_type"].unique()
-for croptype in croptypes:
-    records = records[records["crop_type"] == croptype]
-    chart_maker(records, croptype)
+# VV polarization chart
+vv_chart = alt.Chart(vv_records).mark_circle().encode(
+    x="datetime", y="value", color=alt.condition(
+        selection, "acquisition", alt.value("lightgray")),
+    opacity=alt.condition(selection, alt.value(1), alt.value(0.2))).add_selection(selection).\
+    properties(title="VV Polarization")
+# st.altair_chart(vv_chart, use_container_width=True)
 
+# VH polarization chart
+vh_chart = alt.Chart(vh_records).mark_circle().encode(
+    x="datetime", y="value", color=alt.condition(
+        selection, "acquisition", alt.value("lightgray")),
+    opacity=alt.condition(selection, alt.value(1), alt.value(0.2))).add_selection(selection).\
+    properties(title="VH Polarization")
+
+# plot charts
+st.altair_chart(vv_chart | vh_chart)
+
+# NDVI chart
+# ndvi_chart = alt.Chart(ndvi_records).mark_circle().encode(
+#     x="datetime", y="value", color=alt.condition(
+#         selection, "acquisition", alt.value("lightgray")),
+#     opacity=alt.condition(selection, alt.value(1), alt.value(0.2))).add_selection(selection).\
+#     properties(title="NDVI")
+# st.altair_chart(ndvi_chart)
 
 cursor.close()
 db.close()
