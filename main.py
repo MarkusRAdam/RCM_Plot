@@ -143,16 +143,18 @@ selection = alt.selection_multi(fields=['acquisition'], bind='legend')
 
 # VV polarization chart
 vv_chart = alt.Chart(vv_records).mark_circle().encode(
-    x="datetime", y="value", color=alt.condition(
-        selection, "acquisition", alt.value("lightgray")),
+    x=alt.X("datetime", axis=alt.Axis(title='Date')),
+    y=alt.Y("value", axis=alt.Axis(title='Backscatter')),
+    color=alt.condition(selection, "acquisition", alt.value("lightgray")),
     opacity=alt.condition(selection, alt.value(1), alt.value(0.2))).add_selection(selection).\
     properties(title="VV Polarization")
 # st.altair_chart(vv_chart, use_container_width=True)
 
 # VH polarization chart
 vh_chart = alt.Chart(vh_records).mark_circle().encode(
-    x="datetime", y="value", color=alt.condition(
-        selection, "acquisition", alt.value("lightgray")),
+    x=alt.X("datetime", axis=alt.Axis(title='Date')),
+    y=alt.Y("value", axis=alt.Axis(title='Backscatter')),
+    color=alt.condition(selection, "acquisition", alt.value("lightgray")),
     opacity=alt.condition(selection, alt.value(1), alt.value(0.2))).add_selection(selection).\
     properties(title="VH Polarization")
 
