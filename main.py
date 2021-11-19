@@ -24,7 +24,7 @@ aoi_names = pd.read_sql_query('select distinct aoi from areaofinterest;', db)
 years = pd.read_sql_query("select distinct year from areaofinterest;", db)
 crop_types = pd.read_sql_query("select distinct crop_type from croplegend;", db)
 products = pd.read_sql_query("select distinct product from s1fieldstatistic;", db)
-units = pd.read_sql_query("select distinct unit from s1fieldstatistic;", db)
+#units = pd.read_sql_query("select distinct unit from s1fieldstatistic;", db)
 acq_types = pd.read_sql_query("select distinct acquisition from s1fieldstatistic;", db)
 polarization = pd.read_sql_query("select distinct polarization from s1fieldstatistic;", db)
 stats = pd.read_sql_query("select distinct statistic from s1fieldstatistic;", db)
@@ -34,8 +34,8 @@ fid = pd.read_sql_query("select distinct fid from areaofinterest;", db)
 aoi_selection = st.sidebar.selectbox("Select AOI", aoi_names)
 year_selection = st.sidebar.selectbox("Select Year", years)
 crop_selection = st.sidebar.selectbox("Select Crop Type", crop_types)
-product_selection = st.sidebar.selectbox("Select Product Level", products)
-unit_selection = st.sidebar.selectbox("Select Unit", units)
+#product_selection = st.sidebar.selectbox("Select Product Level", products)
+#unit_selection = st.sidebar.selectbox("Select Unit", units)
 stat_selection = st.sidebar.selectbox("Select Statistic", stats)
 
 st.sidebar.markdown('#')
@@ -44,6 +44,7 @@ st.sidebar.header('Dependent Filters')
 # get list of multiselections from user
 acq_selection = tuple(st.sidebar.multiselect("Select Acquisition Mode", acq_types))
 pol_selection = tuple(st.sidebar.multiselect("Select Polarization", polarization))
+product_selection = tuple(st.sidebar.multiselect("Select Product", products))
 fid_selection = tuple(st.sidebar.multiselect("Select FID", fid))
 
 
@@ -59,6 +60,7 @@ def placeholders(multiselections):
 # apply placeholder function
 acq_selection = placeholders(acq_selection)
 pol_selection = placeholders(pol_selection)
+product_selection = placeholders(product_selection)
 fid_selection = placeholders(fid_selection)
 
 # CROP_TYPE_CODE = 'WW'
@@ -106,10 +108,9 @@ sql = f"""SELECT
     s1.aoi="{aoi_selection}"
     AND area.crop_type="{crop_selection}"
     AND area.year="{year_selection}"
-    AND s1.product="{product_selection}"
+    AND s1.product IN {repr(product_selection)}
     AND s1.acquisition IN {repr(acq_selection)}
     AND s1.polarization IN {repr(pol_selection)}
-    AND s1.unit="{unit_selection}"
     AND area.fid IN {repr(fid_selection)}
     AND s1.statistic = "{stat_selection}"
     ORDER BY s1.mask_label, s1.datetime  ASC; """
@@ -148,7 +149,7 @@ vv_chart = alt.Chart(vv_records).mark_circle().encode(
     color=alt.condition(selection, "acquisition", alt.value("lightgray")),
     opacity=alt.condition(selection, alt.value(1), alt.value(0.2))).add_selection(selection).\
     properties(title="VV Polarization")
-# st.altair_chart(vv_chart, use_container_width=True)
+#st.altair_chart(vv_chart, use_container_width=True)
 
 # VH polarization chart
 vh_chart = alt.Chart(vh_records).mark_circle().encode(
@@ -157,17 +158,17 @@ vh_chart = alt.Chart(vh_records).mark_circle().encode(
     color=alt.condition(selection, "acquisition", alt.value("lightgray")),
     opacity=alt.condition(selection, alt.value(1), alt.value(0.2))).add_selection(selection).\
     properties(title="VH Polarization")
-
-# plot charts
-st.altair_chart(vv_chart | vh_chart)
+#st.altair_chart(vh_chart, use_container_width=True)
 
 # NDVI chart
-# ndvi_chart = alt.Chart(ndvi_records).mark_circle().encode(
-#     x="datetime", y="value", color=alt.condition(
-#         selection, "acquisition", alt.value("lightgray")),
-#     opacity=alt.condition(selection, alt.value(1), alt.value(0.2))).add_selection(selection).\
-#     properties(title="NDVI")
-# st.altair_chart(ndvi_chart)
+ndvi_chart = alt.Chart(ndvi_records).mark_circle().encode(
+    x=alt.X("datetime", axis=alt.Axis(title='Date')),
+    y=alt.Y("value", axis=alt.Axis(title='NDVI Value')),
+    color=alt.condition(selection, "acquisition", alt.value("lightgray")),
+    opacity=alt.condition(selection, alt.value(1), alt.value(0.2))).add_selection(selection).\
+    properties(title="NDVI")
+#st.altair_chart(ndvi_chart, use_container_width=True)
 
+st.altair_chart(alt.vconcat(vv_chart, vh_chart, ndvi_chart))
 cursor.close()
 db.close()
