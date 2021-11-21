@@ -132,6 +132,10 @@ slider_1, slider_2 = st.slider('Select date range', value=(start_date, end_date)
 # filter dataframe based on slider values
 records = records[(records['datetime'] > slider_1) & (records['datetime'] < slider_2)]
 
+# get earliest and latest date again from now date-filtered dataset
+start_date = records["datetime"].min()
+end_date = records["datetime"].max()
+
 st.dataframe(records)
 
 # filter records by polarisation/value for different plots
@@ -142,9 +146,12 @@ ndvi_records = records[records["parameter"] == "NDVI"]
 # set columns for values to be colored by
 selection = alt.selection_multi(fields=['acquisition'], bind='legend')
 
+# set domain containing earliest and latest date of dataset, used as boundaries for x axis of charts
+domain_pd = pd.to_datetime([start_date, end_date]).astype(int) / 10 ** 6
+
 # VV polarization chart
 vv_chart = alt.Chart(vv_records).mark_circle().encode(
-    x=alt.X("datetime", axis=alt.Axis(title='Date')),
+    x=alt.X("datetime:T", axis=alt.Axis(title='Date'), scale=alt.Scale(domain=list(domain_pd))),
     y=alt.Y("value", axis=alt.Axis(title='Backscatter')),
     color=alt.condition(selection, "acquisition", alt.value("lightgray")),
     opacity=alt.condition(selection, alt.value(1), alt.value(0.2))).add_selection(selection).\
@@ -153,7 +160,7 @@ vv_chart = alt.Chart(vv_records).mark_circle().encode(
 
 # VH polarization chart
 vh_chart = alt.Chart(vh_records).mark_circle().encode(
-    x=alt.X("datetime", axis=alt.Axis(title='Date')),
+    x=alt.X("datetime:T", axis=alt.Axis(title='Date'), scale=alt.Scale(domain=list(domain_pd))),
     y=alt.Y("value", axis=alt.Axis(title='Backscatter')),
     color=alt.condition(selection, "acquisition", alt.value("lightgray")),
     opacity=alt.condition(selection, alt.value(1), alt.value(0.2))).add_selection(selection).\
@@ -162,7 +169,7 @@ vh_chart = alt.Chart(vh_records).mark_circle().encode(
 
 # NDVI chart
 ndvi_chart = alt.Chart(ndvi_records).mark_circle().encode(
-    x=alt.X("datetime", axis=alt.Axis(title='Date')),
+    x=alt.X("datetime:T", axis=alt.Axis(title='Date'), scale=alt.Scale(domain=list(domain_pd))),
     y=alt.Y("value", axis=alt.Axis(title='NDVI Value')),
     color=alt.condition(selection, "acquisition", alt.value("lightgray")),
     opacity=alt.condition(selection, alt.value(1), alt.value(0.2))).add_selection(selection).\
@@ -170,5 +177,6 @@ ndvi_chart = alt.Chart(ndvi_records).mark_circle().encode(
 #st.altair_chart(ndvi_chart, use_container_width=True)
 
 st.altair_chart(alt.vconcat(vv_chart, vh_chart, ndvi_chart))
+
 cursor.close()
 db.close()
