@@ -12,6 +12,8 @@ try:
 except sqlite3.Error as error:
     print("Error while connecting to Database", error)
 
+# set layout
+st.set_page_config(layout="wide")
 # create sider
 st.sidebar.title('Radar Crop Monitor APP')
 st.sidebar.markdown('_Short Description of the Project & Contributors ... _')
@@ -151,32 +153,47 @@ domain_pd = pd.to_datetime([start_date, end_date]).astype(int) / 10 ** 6
 
 # VV polarization chart
 vv_chart = alt.Chart(vv_records).mark_circle().encode(
-    x=alt.X("datetime:T", axis=alt.Axis(title='Date'), scale=alt.Scale(domain=list(domain_pd))),
-    y=alt.Y("value", axis=alt.Axis(title='Backscatter')),
+    x=alt.X("datetime:T", axis=alt.Axis(title='Date', titleFontSize=22), scale=alt.Scale(domain=list(domain_pd))),
+    y=alt.Y("value", axis=alt.Axis(title='Backscatter', titleFontSize=22)),
     color=alt.condition(selection, "acquisition", alt.value("lightgray")),
     opacity=alt.condition(selection, alt.value(1), alt.value(0.2))).add_selection(selection).\
-    properties(title="VV Polarization")
+    properties(title="VV Polarization", width=1000, height=500).configure_title(fontSize=28).\
+    configure_legend(titleFontSize=20, labelFontSize=18)
 #st.altair_chart(vv_chart, use_container_width=True)
 
 # VH polarization chart
 vh_chart = alt.Chart(vh_records).mark_circle().encode(
-    x=alt.X("datetime:T", axis=alt.Axis(title='Date'), scale=alt.Scale(domain=list(domain_pd))),
-    y=alt.Y("value", axis=alt.Axis(title='Backscatter')),
+    x=alt.X("datetime:T", axis=alt.Axis(title='Date', titleFontSize=22), scale=alt.Scale(domain=list(domain_pd))),
+    y=alt.Y("value", axis=alt.Axis(title='Backscatter', titleFontSize=22)),
     color=alt.condition(selection, "acquisition", alt.value("lightgray")),
     opacity=alt.condition(selection, alt.value(1), alt.value(0.2))).add_selection(selection).\
-    properties(title="VH Polarization")
+    properties(title="VH Polarization", width=1000, height=500).configure_title(fontSize=28).\
+    configure_legend(titleFontSize=20, labelFontSize=18)
 #st.altair_chart(vh_chart, use_container_width=True)
 
 # NDVI chart
 ndvi_chart = alt.Chart(ndvi_records).mark_circle().encode(
-    x=alt.X("datetime:T", axis=alt.Axis(title='Date'), scale=alt.Scale(domain=list(domain_pd))),
-    y=alt.Y("value", axis=alt.Axis(title='NDVI Value')),
+    x=alt.X("datetime:T", axis=alt.Axis(title='Date', titleFontSize=22), scale=alt.Scale(domain=list(domain_pd))),
+    y=alt.Y("value", axis=alt.Axis(title='NDVI Value', titleFontSize=22)),
     color=alt.condition(selection, "acquisition", alt.value("lightgray")),
     opacity=alt.condition(selection, alt.value(1), alt.value(0.2))).add_selection(selection).\
-    properties(title="NDVI")
+    properties(title="NDVI", width=1000, height=500).configure_title(fontSize=28).\
+    configure_legend(titleFontSize=20, labelFontSize=18)
 #st.altair_chart(ndvi_chart, use_container_width=True)
 
-st.altair_chart(alt.vconcat(vv_chart, vh_chart, ndvi_chart))
+chart_list = []
+if records["parameter"].str.contains("VV").any() and "VV" in pol_selection:
+    chart_list.append(vv_chart)
+if records["parameter"].str.contains("VH").any() and "VH" in pol_selection:
+    chart_list.append(vh_chart)
+if records["parameter"].str.contains("NDVI").any() and "NDVI" in pol_selection:
+    chart_list.append(ndvi_chart)
+
+for i in chart_list:
+    st.altair_chart(i)
+
+#st.altair_chart(alt.vconcat(vv_chart, vh_chart, ndvi_chart).configure_legend(titleFontSize=20, labelFontSize=18).
+#                configure_title(fontSize=28))
 
 cursor.close()
 db.close()
