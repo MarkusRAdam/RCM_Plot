@@ -157,8 +157,12 @@ vv_chart = alt.Chart(vv_records).mark_circle().encode(
     y=alt.Y("value", axis=alt.Axis(title='Backscatter', titleFontSize=22)),
     color=alt.condition(selection, "acquisition", alt.value("lightgray")),
     opacity=alt.condition(selection, alt.value(1), alt.value(0.2))).add_selection(selection).\
-    properties(title="VV Polarization", width=1000, height=500).configure_title(fontSize=28).\
-    configure_legend(titleFontSize=20, labelFontSize=18)
+    properties(title="VV Polarization", width=1000, height=500)
+vv_loess = alt.Chart(vv_records).encode(
+    x=alt.X("datetime:T", axis=alt.Axis(title='Date', titleFontSize=22), scale=alt.Scale(domain=list(domain_pd))),
+    y=alt.Y("value", axis=alt.Axis(title='Backscatter', titleFontSize=22))).\
+    transform_loess("datetime", "value").mark_line()
+vv_chart = vv_chart + vv_loess
 #st.altair_chart(vv_chart, use_container_width=True)
 
 # VH polarization chart
@@ -167,8 +171,12 @@ vh_chart = alt.Chart(vh_records).mark_circle().encode(
     y=alt.Y("value", axis=alt.Axis(title='Backscatter', titleFontSize=22)),
     color=alt.condition(selection, "acquisition", alt.value("lightgray")),
     opacity=alt.condition(selection, alt.value(1), alt.value(0.2))).add_selection(selection).\
-    properties(title="VH Polarization", width=1000, height=500).configure_title(fontSize=28).\
-    configure_legend(titleFontSize=20, labelFontSize=18)
+    properties(title="VH Polarization", width=1000, height=500)
+vh_loess = alt.Chart(vh_records).encode(
+    x=alt.X("datetime:T", axis=alt.Axis(title='Date', titleFontSize=22), scale=alt.Scale(domain=list(domain_pd))),
+    y=alt.Y("value", axis=alt.Axis(title='Backscatter', titleFontSize=22))).\
+    transform_loess("datetime", "value").mark_line()
+vh_chart = vh_chart + vh_loess
 #st.altair_chart(vh_chart, use_container_width=True)
 
 # NDVI chart
@@ -177,8 +185,12 @@ ndvi_chart = alt.Chart(ndvi_records).mark_circle().encode(
     y=alt.Y("value", axis=alt.Axis(title='NDVI Value', titleFontSize=22)),
     color=alt.condition(selection, "acquisition", alt.value("lightgray")),
     opacity=alt.condition(selection, alt.value(1), alt.value(0.2))).add_selection(selection).\
-    properties(title="NDVI", width=1000, height=500).configure_title(fontSize=28).\
-    configure_legend(titleFontSize=20, labelFontSize=18)
+    properties(title="NDVI", width=1000, height=500)
+ndvi_loess = alt.Chart(ndvi_records).encode(
+    x=alt.X("datetime:T", axis=alt.Axis(title='Date', titleFontSize=22), scale=alt.Scale(domain=list(domain_pd))),
+    y=alt.Y("value", axis=alt.Axis(title='Backscatter', titleFontSize=22))).\
+    transform_loess("datetime", "value").mark_line()
+ndvi_chart = ndvi_chart + ndvi_loess
 #st.altair_chart(ndvi_chart, use_container_width=True)
 
 chart_list = []
@@ -189,8 +201,8 @@ if records["parameter"].str.contains("VH").any() and "VH" in pol_selection:
 if records["parameter"].str.contains("NDVI").any() and "NDVI" in pol_selection:
     chart_list.append(ndvi_chart)
 
-for i in chart_list:
-    st.altair_chart(i)
+for chart in chart_list:
+    st.altair_chart(chart.configure_title(fontSize=28).configure_legend(titleFontSize=20, labelFontSize=18))
 
 #st.altair_chart(alt.vconcat(vv_chart, vh_chart, ndvi_chart).configure_legend(titleFontSize=20, labelFontSize=18).
 #                configure_title(fontSize=28))
