@@ -21,6 +21,8 @@ st.sidebar.markdown('#')
 st.sidebar.markdown('#')
 st.sidebar.header('Main Filters')
 
+
+
 # load values from specific table columns for value selection by user
 aoi_names = pd.read_sql_query('select distinct aoi from areaofinterest;', db)
 years = pd.read_sql_query("select distinct year from areaofinterest;", db)
@@ -28,7 +30,7 @@ crop_types = pd.read_sql_query("select distinct crop_type from croplegend;", db)
 products = pd.read_sql_query("select distinct product from s1fieldstatistic;", db)
 #units = pd.read_sql_query("select distinct unit from s1fieldstatistic;", db)
 acq_types = pd.read_sql_query("select distinct acquisition from s1fieldstatistic;", db)
-polarization = pd.read_sql_query("select distinct polarization from s1fieldstatistic;", db)
+parameter = pd.read_sql_query("select distinct polarization from s1fieldstatistic;", db)
 stats = pd.read_sql_query("select distinct statistic from s1fieldstatistic;", db)
 fid = pd.read_sql_query("select distinct fid from areaofinterest;", db)
 
@@ -45,8 +47,8 @@ st.sidebar.header('Dependent Filters')
 
 # get list of multiselections from user
 acq_selection = tuple(st.sidebar.multiselect("Select Acquisition Mode", acq_types))
-pol_selection = tuple(st.sidebar.multiselect("Select Polarization", polarization))
 product_selection = tuple(st.sidebar.multiselect("Select Product", products))
+param_selection = tuple(st.sidebar.multiselect("Select Parameter", parameter))
 fid_selection = tuple(st.sidebar.multiselect("Select FID", fid))
 
 
@@ -61,7 +63,7 @@ def placeholders(multiselections):
 
 # apply placeholder function
 acq_selection = placeholders(acq_selection)
-pol_selection = placeholders(pol_selection)
+param_selection = placeholders(param_selection)
 product_selection = placeholders(product_selection)
 fid_selection = placeholders(fid_selection)
 
@@ -112,7 +114,7 @@ sql = f"""SELECT
     AND area.year="{year_selection}"
     AND s1.product IN {repr(product_selection)}
     AND s1.acquisition IN {repr(acq_selection)}
-    AND s1.polarization IN {repr(pol_selection)}
+    AND s1.polarization IN {repr(param_selection)}
     AND area.fid IN {repr(fid_selection)}
     AND s1.statistic = "{stat_selection}"
     ORDER BY s1.mask_label, s1.datetime  ASC; """
@@ -129,10 +131,13 @@ start_date = records["datetime"].min()
 end_date = records["datetime"].max()
 
 # define slider values from user selection
-slider_1, slider_2 = st.slider('Select date range', value=(start_date, end_date), format="MM/DD/YY - hh:mm:ss")
-
+try:
+    slider_1, slider_2 = st.slider('Select date range', value=(start_date, end_date), format="MM/DD/YY - hh:mm:ss")
+    records = records[(records['datetime'] > slider_1) & (records['datetime'] < slider_2)]
+except KeyError:
+    st.warning("Please select values for each filter")
 # filter dataframe based on slider values
-records = records[(records['datetime'] > slider_1) & (records['datetime'] < slider_2)]
+
 
 # get earliest and latest date again from now date-filtered dataset
 start_date = records["datetime"].min()
@@ -194,11 +199,11 @@ ndvi_chart = ndvi_chart + ndvi_loess
 #st.altair_chart(ndvi_chart, use_container_width=True)
 
 chart_list = []
-if records["parameter"].str.contains("VV").any() and "VV" in pol_selection:
+if records["parameter"].str.contains("VV").any() and "VV" in param_selection:
     chart_list.append(vv_chart)
-if records["parameter"].str.contains("VH").any() and "VH" in pol_selection:
+if records["parameter"].str.contains("VH").any() and "VH" in param_selection:
     chart_list.append(vh_chart)
-if records["parameter"].str.contains("NDVI").any() and "NDVI" in pol_selection:
+if records["parameter"].str.contains("NDVI").any() and "NDVI" in param_selection:
     chart_list.append(ndvi_chart)
 
 for chart in chart_list:
