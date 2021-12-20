@@ -145,6 +145,9 @@ end_date = records["datetime"].max()
 
 st.dataframe(records)
 
+# statistic selection
+stat_button = st.radio("Please select statistic trendline for the graphs", ("LOESS", "Rolling Mean"))
+
 # filter records by polarisation/value for different plots
 vv_records = records[records["parameter"] == "VV"]
 vh_records = records[records["parameter"] == "VH"]
@@ -153,10 +156,10 @@ ndvi_records = records[records["parameter"] == "NDVI"]
 # set columns for values to be colored by
 selection = alt.selection_multi(fields=['acquisition'], bind='legend')
 
-# set domain containing earliest and latest date of dataset, used as boundaries for x axis of charts
+# set domain containing earliest and latest date of dataset, used as boundaries for x-axis of charts
 domain_pd = pd.to_datetime([start_date, end_date]).astype(int) / 10 ** 6
 
-# VV polarization chart
+# VV polarization charts
 vv_chart = alt.Chart(vv_records).mark_circle().encode(
     x=alt.X("datetime:T", axis=alt.Axis(title='Date', titleFontSize=22), scale=alt.Scale(domain=list(domain_pd))),
     y=alt.Y("value", axis=alt.Axis(title='Backscatter', titleFontSize=22)),
@@ -165,12 +168,14 @@ vv_chart = alt.Chart(vv_records).mark_circle().encode(
     properties(title="VV Polarization", width=1000, height=500)
 vv_loess = alt.Chart(vv_records).encode(
     x=alt.X("datetime:T", axis=alt.Axis(title='Date', titleFontSize=22), scale=alt.Scale(domain=list(domain_pd))),
-    y=alt.Y("value", axis=alt.Axis(title='Backscatter', titleFontSize=22))).\
-    transform_loess("datetime", "value").mark_line()
-vv_chart = vv_chart + vv_loess
-#st.altair_chart(vv_chart, use_container_width=True)
+    y=alt.Y("value", axis=alt.Axis(title='Backscatter', titleFontSize=22))).transform_filter(selection).\
+    transform_loess("datetime", "value").mark_line(color="black")
+vv_mean = alt.Chart(vv_records).mark_line(color="black").transform_filter(selection).\
+    transform_window(rolling_mean = "mean(value)", frame = [-5, 5]).encode(x='datetime:T', y='rolling_mean:Q')
 
-# VH polarization chart
+
+
+# VH polarization charts
 vh_chart = alt.Chart(vh_records).mark_circle().encode(
     x=alt.X("datetime:T", axis=alt.Axis(title='Date', titleFontSize=22), scale=alt.Scale(domain=list(domain_pd))),
     y=alt.Y("value", axis=alt.Axis(title='Backscatter', titleFontSize=22)),
@@ -179,12 +184,12 @@ vh_chart = alt.Chart(vh_records).mark_circle().encode(
     properties(title="VH Polarization", width=1000, height=500)
 vh_loess = alt.Chart(vh_records).encode(
     x=alt.X("datetime:T", axis=alt.Axis(title='Date', titleFontSize=22), scale=alt.Scale(domain=list(domain_pd))),
-    y=alt.Y("value", axis=alt.Axis(title='Backscatter', titleFontSize=22))).\
-    transform_loess("datetime", "value").mark_line()
-vh_chart = vh_chart + vh_loess
-#st.altair_chart(vh_chart, use_container_width=True)
+    y=alt.Y("value", axis=alt.Axis(title='Backscatter', titleFontSize=22))).transform_filter(selection).\
+    transform_loess("datetime", "value").mark_line(color="black")
+vh_mean = alt.Chart(vh_records).mark_line(color="black").transform_filter(selection).\
+    transform_window(rolling_mean = "mean(value)", frame = [-5, 5]).encode(x='datetime:T', y='rolling_mean:Q')
 
-# NDVI chart
+# NDVI charts
 ndvi_chart = alt.Chart(ndvi_records).mark_circle().encode(
     x=alt.X("datetime:T", axis=alt.Axis(title='Date', titleFontSize=22), scale=alt.Scale(domain=list(domain_pd))),
     y=alt.Y("value", axis=alt.Axis(title='NDVI Value', titleFontSize=22)),
@@ -193,11 +198,23 @@ ndvi_chart = alt.Chart(ndvi_records).mark_circle().encode(
     properties(title="NDVI", width=1000, height=500)
 ndvi_loess = alt.Chart(ndvi_records).encode(
     x=alt.X("datetime:T", axis=alt.Axis(title='Date', titleFontSize=22), scale=alt.Scale(domain=list(domain_pd))),
-    y=alt.Y("value", axis=alt.Axis(title='Backscatter', titleFontSize=22))).\
-    transform_loess("datetime", "value").mark_line()
-ndvi_chart = ndvi_chart + ndvi_loess
-#st.altair_chart(ndvi_chart, use_container_width=True)
+    y=alt.Y("value", axis=alt.Axis(title='Backscatter', titleFontSize=22))).transform_filter(selection).\
+    transform_loess("datetime", "value").mark_line(color="black")
+ndvi_mean = alt.Chart(ndvi_records).mark_line(color="black").transform_filter(selection).\
+    transform_window(rolling_mean = "mean(value)", frame = [-5, 5]).encode(x='datetime:T', y='rolling_mean:Q')
 
+# set trend line type in graphs based on user selection
+if stat_button == "LOESS":
+    vv_chart = vv_chart + vv_loess
+    vh_chart = vh_chart + vh_loess
+    ndvi_chart = ndvi_chart + ndvi_loess
+
+elif stat_button == "Rolling Mean":
+    vv_chart = vv_chart + vv_mean
+    vh_chart = vh_chart + vh_mean
+    ndvi_chart = ndvi_chart + ndvi_mean
+
+# define list of charts to be displayed, based on user selection and data availability
 chart_list = []
 if records["parameter"].str.contains("VV").any() and "VV" in param_selection:
     chart_list.append(vv_chart)
@@ -206,9 +223,9 @@ if records["parameter"].str.contains("VH").any() and "VH" in param_selection:
 if records["parameter"].str.contains("NDVI").any() and "NDVI" in param_selection:
     chart_list.append(ndvi_chart)
 
+# display charts from list
 for chart in chart_list:
     st.altair_chart(chart.configure_title(fontSize=28).configure_legend(titleFontSize=20, labelFontSize=18))
-
 #st.altair_chart(alt.vconcat(vv_chart, vh_chart, ndvi_chart).configure_legend(titleFontSize=20, labelFontSize=18).
 #                configure_title(fontSize=28))
 
