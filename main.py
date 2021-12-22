@@ -14,14 +14,18 @@ except sqlite3.Error as error:
 
 # set layout
 st.set_page_config(layout="wide")
-# create sider
-st.sidebar.title('Radar Crop Monitor APP')
-st.sidebar.markdown('_Short Description of the Project & Contributors ... _')
-st.sidebar.markdown('#')
-st.sidebar.markdown('#')
+
+# create title
+st.title('Radar Crop Monitor APP')
+st.markdown('Display SAR Parameters for Crop Monitoring')
+st.markdown("Please select the main and dependent filter first")
+st.markdown("Please note that displaying the data may take some time")
+st.markdown('#')
+
+# create Filters
+st.sidebar.title("Filters")
+st.sidebar.markdown("#")
 st.sidebar.header('Main Filters')
-
-
 
 # load values from specific table columns for value selection by user
 aoi_names = pd.read_sql_query('select distinct aoi from areaofinterest;', db)
@@ -51,6 +55,8 @@ product_selection = tuple(st.sidebar.multiselect("Select Product", products))
 param_selection = tuple(st.sidebar.multiselect("Select Parameter", parameter))
 fid_selection = tuple(st.sidebar.multiselect("Select FID", fid))
 
+# list of multiselections
+dependent_selections = [acq_selection, product_selection, param_selection, fid_selection]
 
 # function to add placeholder to multiselection tuple if len == 1 (prevents syntax error)
 def placeholders(multiselections):
@@ -121,6 +127,10 @@ sql = f"""SELECT
 
 records = pd.read_sql(sql, db)
 
+# check if valid filter combination is selected
+if records.empty and all(len(x) == 1 for x in dependent_selections):
+    st.warning("No data is available with this filter combination. Please select other filter combinations")
+
 # create sliders for time frame selection (start and end date of time series plots)
 # convert datetime string column to datetime
 records["datetime"] = pd.to_datetime(records["datetime"])
@@ -130,12 +140,17 @@ records["datetime"] = pd.to_datetime(records['datetime']).apply(lambda x: x.date
 start_date = records["datetime"].min()
 end_date = records["datetime"].max()
 
+# define expander box for time slider and trendline selection
+expander = st.expander("Time and Trendline Filter")
+
 # define slider values from user selection
 try:
-    slider_1, slider_2 = st.slider('Select date range', value=(start_date, end_date), format="MM/DD/YY - hh:mm:ss")
+    expander.subheader("Select date range")
+    slider_1, slider_2 = expander.slider('', value=(start_date, end_date), format="DD.MM.YY")
     records = records[(records['datetime'] > slider_1) & (records['datetime'] < slider_2)]
 except KeyError:
-    st.warning("Please select values for each filter")
+    expander.warning("Please select values for each filter")
+
 # filter dataframe based on slider values
 
 
@@ -143,10 +158,13 @@ except KeyError:
 start_date = records["datetime"].min()
 end_date = records["datetime"].max()
 
-st.dataframe(records)
+#st.dataframe(records)
 
 # statistic selection
-stat_button = st.radio("Please select statistic trendline for the graphs", ("LOESS", "Rolling Mean"))
+expander.markdown("#")
+expander.subheader("Please select statistic trendline for the graphs")
+stat_button = expander.radio("", ("LOESS", "Rolling Mean"))
+st.markdown("#")
 
 # filter records by polarisation/value for different plots
 vv_records = records[records["parameter"] == "VV"]
@@ -228,6 +246,11 @@ for chart in chart_list:
     st.altair_chart(chart.configure_title(fontSize=28).configure_legend(titleFontSize=20, labelFontSize=18))
 #st.altair_chart(alt.vconcat(vv_chart, vh_chart, ndvi_chart).configure_legend(titleFontSize=20, labelFontSize=18).
 #                configure_title(fontSize=28))
+
+# data source and contributors
+st.markdown("#")
+st.markdown("Data Source: ESA Copernicus-Data")
+st.markdown("Contributors: Markus Adam, Laura Walder")
 
 cursor.close()
 db.close()
