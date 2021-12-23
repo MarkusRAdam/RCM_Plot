@@ -1,3 +1,5 @@
+# Script for displaying graphs of SAR parameters from a database in a streamlit web app #
+
 import streamlit as st
 import pandas as pd
 import sqlite3
@@ -12,27 +14,26 @@ try:
 except sqlite3.Error as error:
     print("Error while connecting to Database", error)
 
-# set layout
+# set page layout
 st.set_page_config(layout="wide")
 
-# create title
+# create title and description
 st.title('Radar Crop Monitor APP')
 st.markdown('Display SAR Parameters for Crop Monitoring')
 st.markdown("Please select the main and dependent filter first")
 st.markdown("Please note that displaying the data may take some time")
 st.markdown('#')
 
-# create Filters
+# create titles for data filters
 st.sidebar.title("Filters")
 st.sidebar.markdown("#")
 st.sidebar.header('Main Filters')
 
-# load values from specific table columns for value selection by user
+# load values from specific table columns for value selection (filters) by user
 aoi_names = pd.read_sql_query('select distinct aoi from areaofinterest;', db)
 years = pd.read_sql_query("select distinct year from areaofinterest;", db)
 crop_types = pd.read_sql_query("select distinct crop_type from croplegend;", db)
 products = pd.read_sql_query("select distinct product from s1fieldstatistic;", db)
-#units = pd.read_sql_query("select distinct unit from s1fieldstatistic;", db)
 acq_types = pd.read_sql_query("select distinct acquisition from s1fieldstatistic;", db)
 parameter = pd.read_sql_query("select distinct polarization from s1fieldstatistic;", db)
 stats = pd.read_sql_query("select distinct statistic from s1fieldstatistic;", db)
@@ -42,8 +43,6 @@ fid = pd.read_sql_query("select distinct fid from areaofinterest;", db)
 aoi_selection = st.sidebar.selectbox("Select AOI", aoi_names)
 year_selection = st.sidebar.selectbox("Select Year", years)
 crop_selection = st.sidebar.selectbox("Select Crop Type", crop_types)
-#product_selection = st.sidebar.selectbox("Select Product Level", products)
-#unit_selection = st.sidebar.selectbox("Select Unit", units)
 stat_selection = st.sidebar.selectbox("Select Statistic", stats)
 
 st.sidebar.markdown('#')
@@ -58,7 +57,10 @@ fid_selection = tuple(st.sidebar.multiselect("Select FID", fid))
 # list of multiselections
 dependent_selections = [acq_selection, product_selection, param_selection, fid_selection]
 
+
 # function to add placeholder to multiselection tuple if len == 1 (prevents syntax error)
+
+
 def placeholders(multiselections):
     if len(multiselections) == 1:
         multiselections = multiselections + ("placeholder",)
@@ -72,16 +74,6 @@ acq_selection = placeholders(acq_selection)
 param_selection = placeholders(param_selection)
 product_selection = placeholders(product_selection)
 fid_selection = placeholders(fid_selection)
-
-# CROP_TYPE_CODE = 'WW'
-# AOI = 'FRIEN'
-# YEAR = '2017'
-# PRODUCT = 'GRD'
-# ACQ = 'A'
-# POLARIS = 'VV'
-# UNIT = 'dB'
-# FID = '36'
-# STATISTIC = 'median'
 
 # define sql body
 sql = f"""SELECT 
@@ -125,25 +117,26 @@ sql = f"""SELECT
     AND s1.statistic = "{stat_selection}"
     ORDER BY s1.mask_label, s1.datetime  ASC; """
 
+# load table as df with sql query
 records = pd.read_sql(sql, db)
 
-# check if valid filter combination is selected
+# print warning if invalid filter combination (with no data) is selected
 if records.empty and all(len(x) == 1 for x in dependent_selections):
     st.warning("No data is available with this filter combination. Please select other filter combinations")
+
+# define expander box for time slider and trendline selection
+expander = st.expander("Time and Trendline Filter")
 
 # create sliders for time frame selection (start and end date of time series plots)
 # convert datetime string column to datetime
 records["datetime"] = pd.to_datetime(records["datetime"])
 records["datetime"] = pd.to_datetime(records['datetime']).apply(lambda x: x.date())
 
-# get earliest and latest date from dataset as boundaries for slider
+# get earliest and latest date from df as boundaries for slider
 start_date = records["datetime"].min()
 end_date = records["datetime"].max()
 
-# define expander box for time slider and trendline selection
-expander = st.expander("Time and Trendline Filter")
-
-# define slider values from user selection
+# define slider values from user selection and filter df based on these values
 try:
     expander.subheader("Select date range")
     slider_1, slider_2 = expander.slider('', value=(start_date, end_date), format="DD.MM.YY")
@@ -151,27 +144,22 @@ try:
 except KeyError:
     expander.warning("Please select values for each filter")
 
-# filter dataframe based on slider values
-
-
-# get earliest and latest date again from now date-filtered dataset
+# get earliest and latest date again from now date-filtered df
 start_date = records["datetime"].min()
 end_date = records["datetime"].max()
 
-#st.dataframe(records)
-
-# statistic selection
+# make button for selection of trend line type
 expander.markdown("#")
 expander.subheader("Please select statistic trendline for the graphs")
 stat_button = expander.radio("", ("LOESS", "Rolling Mean"))
 st.markdown("#")
 
-# filter records by polarisation/value for different plots
+# filter df by polarisation/value for different plots
 vv_records = records[records["parameter"] == "VV"]
 vh_records = records[records["parameter"] == "VH"]
 ndvi_records = records[records["parameter"] == "NDVI"]
 
-# set columns for values to be colored by
+# set df column by which points are colored
 selection = alt.selection_multi(fields=['acquisition'], bind='legend')
 
 # set domain containing earliest and latest date of dataset, used as boundaries for x-axis of charts
@@ -189,9 +177,7 @@ vv_loess = alt.Chart(vv_records).encode(
     y=alt.Y("value", axis=alt.Axis(title='Backscatter', titleFontSize=22))).transform_filter(selection).\
     transform_loess("datetime", "value").mark_line(color="black")
 vv_mean = alt.Chart(vv_records).mark_line(color="black").transform_filter(selection).\
-    transform_window(rolling_mean = "mean(value)", frame = [-5, 5]).encode(x='datetime:T', y='rolling_mean:Q')
-
-
+    transform_window(rolling_mean="mean(value)", frame=[-5, 5]).encode(x='datetime:T', y='rolling_mean:Q')
 
 # VH polarization charts
 vh_chart = alt.Chart(vh_records).mark_circle().encode(
@@ -205,7 +191,7 @@ vh_loess = alt.Chart(vh_records).encode(
     y=alt.Y("value", axis=alt.Axis(title='Backscatter', titleFontSize=22))).transform_filter(selection).\
     transform_loess("datetime", "value").mark_line(color="black")
 vh_mean = alt.Chart(vh_records).mark_line(color="black").transform_filter(selection).\
-    transform_window(rolling_mean = "mean(value)", frame = [-5, 5]).encode(x='datetime:T', y='rolling_mean:Q')
+    transform_window(rolling_mean="mean(value)", frame=[-5, 5]).encode(x='datetime:T', y='rolling_mean:Q')
 
 # NDVI charts
 ndvi_chart = alt.Chart(ndvi_records).mark_circle().encode(
@@ -219,9 +205,9 @@ ndvi_loess = alt.Chart(ndvi_records).encode(
     y=alt.Y("value", axis=alt.Axis(title='Backscatter', titleFontSize=22))).transform_filter(selection).\
     transform_loess("datetime", "value").mark_line(color="black")
 ndvi_mean = alt.Chart(ndvi_records).mark_line(color="black").transform_filter(selection).\
-    transform_window(rolling_mean = "mean(value)", frame = [-5, 5]).encode(x='datetime:T', y='rolling_mean:Q')
+    transform_window(rolling_mean="mean(value)", frame=[-5, 5]).encode(x='datetime:T', y='rolling_mean:Q')
 
-# set trend line type in graphs based on user selection
+# set trend line type in charts based on user selection
 if stat_button == "LOESS":
     vv_chart = vv_chart + vv_loess
     vh_chart = vh_chart + vh_loess
@@ -244,13 +230,12 @@ if records["parameter"].str.contains("NDVI").any() and "NDVI" in param_selection
 # display charts from list
 for chart in chart_list:
     st.altair_chart(chart.configure_title(fontSize=28).configure_legend(titleFontSize=20, labelFontSize=18))
-#st.altair_chart(alt.vconcat(vv_chart, vh_chart, ndvi_chart).configure_legend(titleFontSize=20, labelFontSize=18).
-#                configure_title(fontSize=28))
 
-# data source and contributors
+# print data source and contributors
 st.markdown("#")
 st.markdown("Data Source: ESA Copernicus-Data")
 st.markdown("Contributors: Markus Adam, Laura Walder")
 
+# close connection to db
 cursor.close()
 db.close()
