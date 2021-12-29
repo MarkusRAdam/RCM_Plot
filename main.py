@@ -18,10 +18,9 @@ except sqlite3.Error as error:
 st.set_page_config(layout="wide")
 
 # create title and description
-st.title('Radar Crop Monitor APP')
-st.markdown('Display SAR Parameters for Crop Monitoring')
-st.markdown("Please select the main and dependent filter first")
-st.markdown("Please note that displaying the data may take some time")
+st.title('Radar Crop Monitor App')
+st.markdown('This app can be used to display SAR parameters and NDVI values for crop monitoring.')
+st.markdown("Please select the main and dependent filter first and note that displaying the data may take some time.")
 st.markdown('#')
 
 # create titles for data filters
@@ -40,19 +39,24 @@ stats = pd.read_sql_query("select distinct statistic from s1fieldstatistic;", db
 fid = pd.read_sql_query("select distinct fid from areaofinterest;", db)
 
 # get single value selections from user
-aoi_selection = st.sidebar.selectbox("Select AOI", aoi_names)
-year_selection = st.sidebar.selectbox("Select Year", years)
-crop_selection = st.sidebar.selectbox("Select Crop Type", crop_types)
-stat_selection = st.sidebar.selectbox("Select Statistic", stats)
+aoi_selection = st.sidebar.selectbox("AOI", aoi_names)
+year_selection = st.sidebar.selectbox("Year", years)
+crop_selection = st.sidebar.selectbox("Crop Type", crop_types)
+stat_selection = st.sidebar.selectbox("Statistic", stats)
 
 st.sidebar.markdown('#')
 st.sidebar.header('Dependent Filters')
 
 # get list of multiselections from user
-acq_selection = tuple(st.sidebar.multiselect("Select Acquisition Mode", acq_types))
-product_selection = tuple(st.sidebar.multiselect("Select Product", products))
-param_selection = tuple(st.sidebar.multiselect("Select Parameter", parameter))
-fid_selection = tuple(st.sidebar.multiselect("Select FID", fid))
+acq_selection = tuple(st.sidebar.multiselect("Acquisition Mode", acq_types))
+product_selection = tuple(st.sidebar.multiselect("Product", products))
+param_selection = tuple(st.sidebar.multiselect("Parameter", parameter))
+fid_selection = tuple(st.sidebar.multiselect("FID", fid))
+
+# print data source and contributors
+st.sidebar.markdown("#")
+st.sidebar.markdown("Data Source: ESA Copernicus-Data")
+st.sidebar.markdown("Contributors: Markus Adam, Laura Walder")
 
 # list of multiselections
 dependent_selections = [acq_selection, product_selection, param_selection, fid_selection]
@@ -125,7 +129,7 @@ if records.empty and all(len(x) == 1 for x in dependent_selections):
     st.warning("No data is available with this filter combination. Please select other filter combinations")
 
 # define expander box for time slider and trendline selection
-expander = st.expander("Time and Trendline Filter")
+expander = st.expander("Time and Trendline Filter", expanded=True)
 
 # create sliders for time frame selection (start and end date of time series plots)
 # convert datetime string column to datetime
@@ -142,7 +146,7 @@ try:
     slider_1, slider_2 = expander.slider('', value=(start_date, end_date), format="DD.MM.YY")
     records = records[(records['datetime'] > slider_1) & (records['datetime'] < slider_2)]
 except KeyError:
-    expander.warning("Please select values for each filter")
+    expander.warning("Date range slider is only available after a valid filter combination has been selected")
 
 # get earliest and latest date again from now date-filtered df
 start_date = records["datetime"].min()
@@ -150,8 +154,8 @@ end_date = records["datetime"].max()
 
 # make button for selection of trend line type
 expander.markdown("#")
-expander.subheader("Please select statistic trendline for the graphs")
-stat_button = expander.radio("", ("LOESS", "Rolling Mean"))
+expander.subheader("Select statistic trendline for the graphs")
+stat_button = expander.radio("", ("None", "LOESS", "Rolling Mean"))
 st.markdown("#")
 
 # filter df by polarisation/value for different plots
@@ -169,7 +173,7 @@ domain_pd = pd.to_datetime([start_date, end_date]).astype(int) / 10 ** 6
 vv_chart = alt.Chart(vv_records).mark_circle().encode(
     x=alt.X("datetime:T", axis=alt.Axis(title='Date', titleFontSize=22), scale=alt.Scale(domain=list(domain_pd))),
     y=alt.Y("value", axis=alt.Axis(title='Backscatter', titleFontSize=22)),
-    color=alt.condition(selection, "acquisition", alt.value("lightgray")),
+    color=alt.condition(selection, "acquisition", alt.value("lightgray"), sort=["D"]),
     opacity=alt.condition(selection, alt.value(1), alt.value(0.2))).add_selection(selection).\
     properties(title="VV Polarization", width=1000, height=500)
 vv_loess = alt.Chart(vv_records).encode(
@@ -183,7 +187,7 @@ vv_mean = alt.Chart(vv_records).mark_line(color="black").transform_filter(select
 vh_chart = alt.Chart(vh_records).mark_circle().encode(
     x=alt.X("datetime:T", axis=alt.Axis(title='Date', titleFontSize=22), scale=alt.Scale(domain=list(domain_pd))),
     y=alt.Y("value", axis=alt.Axis(title='Backscatter', titleFontSize=22)),
-    color=alt.condition(selection, "acquisition", alt.value("lightgray")),
+    color=alt.condition(selection, "acquisition", alt.value("lightgray"), sort=["D"]),
     opacity=alt.condition(selection, alt.value(1), alt.value(0.2))).add_selection(selection).\
     properties(title="VH Polarization", width=1000, height=500)
 vh_loess = alt.Chart(vh_records).encode(
@@ -197,12 +201,12 @@ vh_mean = alt.Chart(vh_records).mark_line(color="black").transform_filter(select
 ndvi_chart = alt.Chart(ndvi_records).mark_circle().encode(
     x=alt.X("datetime:T", axis=alt.Axis(title='Date', titleFontSize=22), scale=alt.Scale(domain=list(domain_pd))),
     y=alt.Y("value", axis=alt.Axis(title='NDVI Value', titleFontSize=22)),
-    color=alt.condition(selection, "acquisition", alt.value("lightgray")),
+    color=alt.condition(selection, "acquisition", alt.value("lightgray"), sort=["D"]),
     opacity=alt.condition(selection, alt.value(1), alt.value(0.2))).add_selection(selection).\
     properties(title="NDVI", width=1000, height=500)
 ndvi_loess = alt.Chart(ndvi_records).encode(
     x=alt.X("datetime:T", axis=alt.Axis(title='Date', titleFontSize=22), scale=alt.Scale(domain=list(domain_pd))),
-    y=alt.Y("value", axis=alt.Axis(title='Backscatter', titleFontSize=22))).transform_filter(selection).\
+    y=alt.Y("value", axis=alt.Axis(title='NDVI Value', titleFontSize=22))).transform_filter(selection).\
     transform_loess("datetime", "value").mark_line(color="black")
 ndvi_mean = alt.Chart(ndvi_records).mark_line(color="black").transform_filter(selection).\
     transform_window(rolling_mean="mean(value)", frame=[-5, 5]).encode(x='datetime:T', y='rolling_mean:Q')
@@ -230,11 +234,6 @@ if records["parameter"].str.contains("NDVI").any() and "NDVI" in param_selection
 # display charts from list
 for chart in chart_list:
     st.altair_chart(chart.configure_title(fontSize=28).configure_legend(titleFontSize=20, labelFontSize=18))
-
-# print data source and contributors
-st.markdown("#")
-st.markdown("Data Source: ESA Copernicus-Data")
-st.markdown("Contributors: Markus Adam, Laura Walder")
 
 # close connection to db
 cursor.close()
