@@ -124,9 +124,12 @@ sql = f"""SELECT
 # load table as df with sql query
 records = pd.read_sql(sql, db)
 
-# print warning if invalid filter combination (with no data) is selected
-if records.empty and all(len(x) == 1 for x in dependent_selections):
-    st.warning("No data is available with this filter combination. Please select other filter combinations")
+# print warning when no filter is selected and error when invalid filter combination (with no data) is selected
+if records.empty:
+    if all(len(x) == 0 for x in dependent_selections):
+        st.warning("No selection has been made. Please select filter combinations")
+    else:
+        st.error("No data is available with this filter combination. Please select other filter combinations")
 
 # define expander box for time slider and trendline selection
 expander = st.expander("Time and Trendline Filter", expanded=True)
