@@ -1,11 +1,18 @@
-# Script for displaying graphs of SAR parameters from a database in a streamlit web app #
+"""
+Script for displaying graphs of SAR parameters and NDVI values from a database in a streamlit web app
 
+Authors: Markus Adam, Laura Walder
+Date created: 13/10/2021
+Date last modified: 09/01/2022
+Python version: 3.8
+"""
+# import packages
 import streamlit as st
 import pandas as pd
 import sqlite3
 import altair as alt
 
-# connection to db
+# try connection to database (db)
 try:
     db = sqlite3.connect(
         'C:/Users/Markus Adam/Studium/GEO419/students_db_sql_queries/students_db_sql_queries/RCM_work.db')
@@ -17,7 +24,7 @@ except sqlite3.Error as error:
 # set page layout
 st.set_page_config(layout="wide")
 
-# create title and description
+# create app title and description
 st.title('Radar Crop Monitor App')
 st.markdown('This app can be used to display SAR parameters and NDVI values for crop monitoring.')
 st.markdown("Please select the main and dependent filter first and note that displaying the data may take some time.")
@@ -28,7 +35,7 @@ st.sidebar.title("Filters")
 st.sidebar.markdown("#")
 st.sidebar.header('Main Filters')
 
-# load values from specific table columns for value selection (filters) by user
+# load unique values from specific table columns of db to use as selectable values (main and dependent filters)
 aoi_names = pd.read_sql_query('select distinct aoi from areaofinterest;', db)
 years = pd.read_sql_query("select distinct year from areaofinterest;", db)
 crop_types = pd.read_sql_query("select distinct crop_type from croplegend;", db)
@@ -38,7 +45,7 @@ parameter = pd.read_sql_query("select distinct polarization from s1fieldstatisti
 stats = pd.read_sql_query("select distinct statistic from s1fieldstatistic;", db)
 fid = pd.read_sql_query("select distinct fid from areaofinterest;", db)
 
-# get single value selections from user
+# get single value selections of main filters from user
 aoi_selection = st.sidebar.selectbox("AOI", aoi_names)
 year_selection = st.sidebar.selectbox("Year", years)
 crop_selection = st.sidebar.selectbox("Crop Type", crop_types)
@@ -47,7 +54,7 @@ stat_selection = st.sidebar.selectbox("Statistic", stats)
 st.sidebar.markdown('#')
 st.sidebar.header('Dependent Filters')
 
-# get list of multiselections from user
+# get tuples of multiselections (dependent filters) from user
 acq_selection = tuple(st.sidebar.multiselect("Acquisition Mode", acq_types))
 product_selection = tuple(st.sidebar.multiselect("Product", products))
 param_selection = tuple(st.sidebar.multiselect("Parameter", parameter))
@@ -58,11 +65,11 @@ st.sidebar.markdown("#")
 st.sidebar.markdown("Data Source: ESA Copernicus-Data")
 st.sidebar.markdown("Contributors: Markus Adam, Laura Walder")
 
-# list of multiselections
+# list of multiselection tuples
 dependent_selections = [acq_selection, product_selection, param_selection, fid_selection]
 
 
-# function to add placeholder to multiselection tuple if len == 1 (prevents syntax error)
+# function to add placeholder to multiselection tuple if len == 1 (prevents syntax error in sql query)
 
 
 def placeholders(multiselections):
@@ -73,13 +80,13 @@ def placeholders(multiselections):
         return multiselections
 
 
-# apply placeholder function
+# apply placeholder function to multiselection tuples
 acq_selection = placeholders(acq_selection)
 param_selection = placeholders(param_selection)
 product_selection = placeholders(product_selection)
 fid_selection = placeholders(fid_selection)
 
-# define sql body
+# define sql body for query, with filter selections as variables
 sql = f"""SELECT 
     round(s1.value, 2) as value, 
     s1.mask_label, 
@@ -121,7 +128,7 @@ sql = f"""SELECT
     AND s1.statistic = "{stat_selection}"
     ORDER BY s1.mask_label, s1.datetime  ASC; """
 
-# load table as df with sql query
+# apply sql query and load resulting table as dataframe
 records = pd.read_sql(sql, db)
 
 # print warning when no filter is selected and error when invalid filter combination (with no data) is selected
@@ -161,16 +168,18 @@ expander.subheader("Select statistic trendline for the graphs")
 stat_button = expander.radio("", ("None", "LOESS", "Rolling Mean"))
 st.markdown("#")
 
-# filter df by polarisation/value for different plots
+# get subsets of df by filtering by polarisation/value for different plots
 vv_records = records[records["parameter"] == "VV"]
 vh_records = records[records["parameter"] == "VH"]
 ndvi_records = records[records["parameter"] == "NDVI"]
 
-# set df column by which points are colored
+# set df column by which points are colored in graphs
 selection = alt.selection_multi(fields=['acquisition'], bind='legend')
 
-# set domain containing earliest and latest date of dataset, used as boundaries for x-axis of charts
+# set domain containing earliest and latest date in df, used as boundaries for x-axis of charts
 domain_pd = pd.to_datetime([start_date, end_date]).astype(int) / 10 ** 6
+
+# create scatterplot and trendlines (LOESS/Rolling mean) for VV, VH and NDVI values
 
 # VV polarization charts
 vv_chart = alt.Chart(vv_records).mark_circle().encode(
@@ -214,7 +223,7 @@ ndvi_loess = alt.Chart(ndvi_records).encode(
 ndvi_mean = alt.Chart(ndvi_records).mark_line(color="black").transform_filter(selection).\
     transform_window(rolling_mean="mean(value)", frame=[-5, 5]).encode(x='datetime:T', y='rolling_mean:Q')
 
-# set trend line type in charts based on user selection
+# add trend line type to charts based on user selection
 if stat_button == "LOESS":
     vv_chart = vv_chart + vv_loess
     vh_chart = vh_chart + vh_loess
