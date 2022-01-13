@@ -31,7 +31,6 @@ elif db_path.endswith(".db"):
     # try connection to database (db)
     try:
         db = sqlite3.connect(db_path)
-        cursor = db.cursor()
         print("Successfully Connected to SQLite Database")
     except sqlite3.Error as error:
         print("Error while connecting to Database", error)
@@ -39,7 +38,7 @@ elif db_path.endswith(".db"):
     # create app title and description
     st.title('Radar Crop Monitor App')
     st.markdown('This app can be used to display SAR parameters and NDVI values for crop monitoring.')
-    st.markdown("Please select the main and dependent filter first and note that displaying the data may take some time.")
+    st.markdown("Please select the main and dependent filter first. Note that displaying the data may take some time.")
     st.markdown('#')
 
     # create titles for data filters
@@ -192,16 +191,24 @@ elif db_path.endswith(".db"):
 
     # create scatterplot and trendlines (LOESS/Rolling mean) for VV, VH and NDVI values
 
+    # set y-axis label based on selected statistic
+    if stat_selection in ["mean", "median", "std", "mode_value_1"]:
+        y_axis_label_db = "Backscatter [dB]"
+        y_axis_label_ndvi = "NDVI value"
+    else:
+        y_axis_label_db = "Value"
+        y_axis_label_ndvi = "Value"
+
     # VV polarization charts
     vv_chart = alt.Chart(vv_records).mark_circle().encode(
         x=alt.X("datetime:T", axis=alt.Axis(title='Date', titleFontSize=22), scale=alt.Scale(domain=list(domain_pd))),
-        y=alt.Y("value", axis=alt.Axis(title='Backscatter', titleFontSize=22)),
+        y=alt.Y("value", axis=alt.Axis(title=y_axis_label_db, titleFontSize=22)),
         color=alt.condition(selection, "acquisition", alt.value("lightgray"), sort=["D"]),
         opacity=alt.condition(selection, alt.value(1), alt.value(0.2))).add_selection(selection).\
         properties(title="VV Polarization", width=1000, height=500)
     vv_loess = alt.Chart(vv_records).encode(
         x=alt.X("datetime:T", axis=alt.Axis(title='Date', titleFontSize=22), scale=alt.Scale(domain=list(domain_pd))),
-        y=alt.Y("value", axis=alt.Axis(title='Backscatter', titleFontSize=22))).transform_filter(selection).\
+        y=alt.Y("value", axis=alt.Axis(title=y_axis_label_db, titleFontSize=22))).transform_filter(selection).\
         transform_loess("datetime", "value").mark_line(color="red")
     vv_mean = alt.Chart(vv_records).mark_line(color="red").transform_filter(selection).\
         transform_window(rolling_mean="mean(value)", frame=[-5, 5]).encode(x='datetime:T', y='rolling_mean:Q')
@@ -209,13 +216,13 @@ elif db_path.endswith(".db"):
     # VH polarization charts
     vh_chart = alt.Chart(vh_records).mark_circle().encode(
         x=alt.X("datetime:T", axis=alt.Axis(title='Date', titleFontSize=22), scale=alt.Scale(domain=list(domain_pd))),
-        y=alt.Y("value", axis=alt.Axis(title='Backscatter', titleFontSize=22)),
+        y=alt.Y("value", axis=alt.Axis(title=y_axis_label_db, titleFontSize=22)),
         color=alt.condition(selection, "acquisition", alt.value("lightgray"), sort=["D"]),
         opacity=alt.condition(selection, alt.value(1), alt.value(0.2))).add_selection(selection).\
         properties(title="VH Polarization", width=1000, height=500)
     vh_loess = alt.Chart(vh_records).encode(
         x=alt.X("datetime:T", axis=alt.Axis(title='Date', titleFontSize=22), scale=alt.Scale(domain=list(domain_pd))),
-        y=alt.Y("value", axis=alt.Axis(title='Backscatter', titleFontSize=22))).transform_filter(selection).\
+        y=alt.Y("value", axis=alt.Axis(title=y_axis_label_db, titleFontSize=22))).transform_filter(selection).\
         transform_loess("datetime", "value").mark_line(color="red")
     vh_mean = alt.Chart(vh_records).mark_line(color="red").transform_filter(selection).\
         transform_window(rolling_mean="mean(value)", frame=[-5, 5]).encode(x='datetime:T', y='rolling_mean:Q')
@@ -223,13 +230,13 @@ elif db_path.endswith(".db"):
     # NDVI charts
     ndvi_chart = alt.Chart(ndvi_records).mark_circle().encode(
         x=alt.X("datetime:T", axis=alt.Axis(title='Date', titleFontSize=22), scale=alt.Scale(domain=list(domain_pd))),
-        y=alt.Y("value", axis=alt.Axis(title='NDVI Value', titleFontSize=22)),
+        y=alt.Y("value", axis=alt.Axis(title=y_axis_label_ndvi, titleFontSize=22)),
         color=alt.condition(selection, "acquisition", alt.value("lightgray"), sort=["D"]),
         opacity=alt.condition(selection, alt.value(1), alt.value(0.2))).add_selection(selection).\
         properties(title="NDVI", width=1000, height=500)
     ndvi_loess = alt.Chart(ndvi_records).encode(
         x=alt.X("datetime:T", axis=alt.Axis(title='Date', titleFontSize=22), scale=alt.Scale(domain=list(domain_pd))),
-        y=alt.Y("value", axis=alt.Axis(title='NDVI Value', titleFontSize=22))).transform_filter(selection).\
+        y=alt.Y("value", axis=alt.Axis(title=y_axis_label_ndvi, titleFontSize=22))).transform_filter(selection).\
         transform_loess("datetime", "value").mark_line(color="red")
     ndvi_mean = alt.Chart(ndvi_records).mark_line(color="red").transform_filter(selection).\
         transform_window(rolling_mean="mean(value)", frame=[-5, 5]).encode(x='datetime:T', y='rolling_mean:Q')
@@ -259,5 +266,4 @@ elif db_path.endswith(".db"):
         st.altair_chart(chart.configure_title(fontSize=28).configure_legend(titleFontSize=20, labelFontSize=18))
 
     # close connection to db
-    cursor.close()
     db.close()
