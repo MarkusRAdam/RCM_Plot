@@ -12,7 +12,7 @@ import pandas as pd
 import sqlite3
 import altair as alt
 
-# set app webpage layout
+# set app page layout
 st.set_page_config(layout="wide")
 
 # get path to database from user and check if path is valid
@@ -144,16 +144,16 @@ elif db_path.endswith(".db"):
     # print warning when no filter is selected and error when invalid filter combination (with no data) is selected
     if records.empty:
         if any(len(x) == 0 for x in dependent_selections):
-            st.warning("No selection has been made. Please select filter combinations")
+            st.warning("No selection has been made. Please select filter combinations.")
         else:
-            st.error("No data is available with this filter combination. Please select other filter combinations")
+            st.error("No data is available for this filter combination. Please select other filter combinations.")
 
     # define expander box for time slider and trendline selection
-    expander = st.expander("Time and Trendline Filter", expanded=True)
+    expander = st.expander("Date Range and Trendline Filter", expanded=True)
 
-    # create sliders for time frame selection (start and end date of time series plots)
+    # create sliders for date range selection (start and end date of time series plots)
+
     # convert datetime string column to datetime
-    records["datetime"] = pd.to_datetime(records["datetime"])
     records["datetime"] = pd.to_datetime(records['datetime']).apply(lambda x: x.date())
 
     # get earliest and latest date from df as boundaries for slider
@@ -164,7 +164,7 @@ elif db_path.endswith(".db"):
     try:
         expander.subheader("Select date range")
         slider_1, slider_2 = expander.slider('', value=(start_date, end_date), format="DD.MM.YY")
-        records = records[(records['datetime'] > slider_1) & (records['datetime'] < slider_2)]
+        records = records[(records['datetime'] >= slider_1) & (records['datetime'] <= slider_2)]
     except KeyError:
         expander.warning("Date range slider is only available after a valid filter combination has been selected")
 
@@ -174,7 +174,7 @@ elif db_path.endswith(".db"):
 
     # make button for selection of trend line type
     expander.markdown("#")
-    expander.subheader("Select statistic trendline for the graphs")
+    expander.subheader("Select trendline")
     stat_button = expander.radio("", ("None", "LOESS", "Rolling Mean"))
     st.markdown("#")
 
@@ -189,7 +189,7 @@ elif db_path.endswith(".db"):
     # set domain containing earliest and latest date in df, used as boundaries for x-axis of charts
     domain_pd = pd.to_datetime([start_date, end_date]).astype(int) / 10 ** 6
 
-    # create scatterplot and trendlines (LOESS/Rolling mean) for VV, VH and NDVI values
+    # create scatterplots and trendlines (LOESS/Rolling mean) for VV, VH and NDVI values
 
     # set y-axis label based on selected statistic
     if stat_selection in ["mean", "median", "std", "mode_value_1"]:
