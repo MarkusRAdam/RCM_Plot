@@ -151,7 +151,7 @@ elif db_path.endswith(".db"):
     # define expander box for time slider and trendline selection
     expander = st.expander("Date Range and Trendline Filter", expanded=True)
 
-    # create sliders for date range selection (start and end date of time series plots)
+    # create sliders for date range selection (start and end date of x-axis of charts)
 
     # convert datetime string column to datetime
     records["datetime"] = pd.to_datetime(records['datetime']).apply(lambda x: x.date())
@@ -168,28 +168,28 @@ elif db_path.endswith(".db"):
     except KeyError:
         expander.warning("Date range slider is only available after a valid filter combination has been selected")
 
-    # get earliest and latest date again from now date-filtered df
-    start_date = records["datetime"].min()
-    end_date = records["datetime"].max()
-
     # make button for selection of trend line type
     expander.markdown("#")
     expander.subheader("Select trendline")
     stat_button = expander.radio("", ("None", "LOESS", "Rolling Mean"))
     st.markdown("#")
 
-    # get subsets of df by filtering by polarisation/value for different plots
+    # create charts (scatterplots and trendlines (LOESS/Rolling mean)) for VV, VH and NDVI values
+
+    # get subsets of df by filtering by polarisation/value for different charts
     vv_records = records[records["parameter"] == "VV"]
     vh_records = records[records["parameter"] == "VH"]
     ndvi_records = records[records["parameter"] == "NDVI"]
 
-    # set df column by which points are colored in graphs
+    # set df column by which points are colored in charts
     selection = alt.selection_multi(fields=['acquisition'], bind='legend')
+
+    # get earliest and latest date again from now date-filtered df
+    start_date = records["datetime"].min()
+    end_date = records["datetime"].max()
 
     # set domain containing earliest and latest date in df, used as boundaries for x-axis of charts
     domain_pd = pd.to_datetime([start_date, end_date]).astype(int) / 10 ** 6
-
-    # create scatterplots and trendlines (LOESS/Rolling mean) for VV, VH and NDVI values
 
     # set y-axis label based on selected statistic
     if stat_selection in ["mean", "median", "std", "mode_value_1"]:
