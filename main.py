@@ -252,14 +252,30 @@ elif db_path.endswith(".db"):
         vh_chart = vh_chart + vh_mean
         ndvi_chart = ndvi_chart + ndvi_mean
 
-    # define list of charts to be displayed, based on user selection and data availability
+    # define function for list of charts to be displayed
     chart_list = []
-    if records["parameter"].str.contains("VV").any() and "VV" in param_selection:
-        chart_list.append(vv_chart)
-    if records["parameter"].str.contains("VH").any() and "VH" in param_selection:
-        chart_list.append(vh_chart)
-    if records["parameter"].str.contains("NDVI").any() and "NDVI" in param_selection:
-        chart_list.append(ndvi_chart)
+
+    def chart_collector(vv_vh_ndvi, vv_vh_ndvi_chart):
+        """
+        Fills list with chart if the corresponding parameter was selected and is available,
+        returns warning if not.
+
+        Parameters:
+           vv_vh_ndvi (str): Polarisation or NDVI
+           vv_vh_ndvi_chart (altair.chart): chart displaying VV/VH/NDVI values
+        """
+        if vv_vh_ndvi in param_selection:
+            if records["parameter"].str.contains(vv_vh_ndvi).any():
+                chart_list.append(vv_vh_ndvi_chart)
+            elif records.empty is False:
+                param_warning = "No data available for parameter {}".format(vv_vh_ndvi)
+                return st.warning(param_warning)
+
+
+    # apply function to fill chart list
+    chart_collector("VV", vv_chart)
+    chart_collector("VH", vh_chart)
+    chart_collector("NDVI", ndvi_chart)
 
     # display charts from list
     for chart in chart_list:
