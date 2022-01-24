@@ -182,7 +182,7 @@ elif db_path.endswith(".db"):
     ndvi_records = records[records["parameter"] == "NDVI"]
 
     # set df column by which points are colored in charts
-    selection = alt.selection_multi(fields=['acquisition'], bind='legend')
+    color_selection = alt.selection_multi(fields=['acquisition'], bind='legend')
 
     # get earliest and latest date again from now date-filtered df
     start_date = records["datetime"].min()
@@ -199,60 +199,53 @@ elif db_path.endswith(".db"):
         y_axis_label_db = "Value"
         y_axis_label_ndvi = "Value"
 
-    # VV polarization charts
-    vv_chart = alt.Chart(vv_records).mark_circle().encode(
-        x=alt.X("datetime:T", axis=alt.Axis(title='Date', titleFontSize=22), scale=alt.Scale(domain=list(domain_pd))),
-        y=alt.Y("value", axis=alt.Axis(title=y_axis_label_db, titleFontSize=22)),
-        color=alt.condition(selection, "acquisition", alt.value("lightgray"), sort=["D"]),
-        opacity=alt.condition(selection, alt.value(1), alt.value(0.2))).add_selection(selection).\
-        properties(title="VV Polarization", width=1000, height=500)
-    vv_loess = alt.Chart(vv_records).encode(
-        x=alt.X("datetime:T", axis=alt.Axis(title='Date', titleFontSize=22), scale=alt.Scale(domain=list(domain_pd))),
-        y=alt.Y("value", axis=alt.Axis(title=y_axis_label_db, titleFontSize=22))).transform_filter(selection).\
-        transform_loess("datetime", "value").mark_line(color="red")
-    vv_mean = alt.Chart(vv_records).mark_line(color="red").transform_filter(selection).\
-        transform_window(rolling_mean="mean(value)", frame=[-5, 5]).encode(x='datetime:T', y='rolling_mean:Q')
+    # set chart titles
+    vv_title = "VV Polarisation"
+    vh_title = "VH Polarisation"
+    ndvi_title = "NDVI"
 
-    # VH polarization charts
-    vh_chart = alt.Chart(vh_records).mark_circle().encode(
-        x=alt.X("datetime:T", axis=alt.Axis(title='Date', titleFontSize=22), scale=alt.Scale(domain=list(domain_pd))),
-        y=alt.Y("value", axis=alt.Axis(title=y_axis_label_db, titleFontSize=22)),
-        color=alt.condition(selection, "acquisition", alt.value("lightgray"), sort=["D"]),
-        opacity=alt.condition(selection, alt.value(1), alt.value(0.2))).add_selection(selection).\
-        properties(title="VH Polarization", width=1000, height=500)
-    vh_loess = alt.Chart(vh_records).encode(
-        x=alt.X("datetime:T", axis=alt.Axis(title='Date', titleFontSize=22), scale=alt.Scale(domain=list(domain_pd))),
-        y=alt.Y("value", axis=alt.Axis(title=y_axis_label_db, titleFontSize=22))).transform_filter(selection).\
-        transform_loess("datetime", "value").mark_line(color="red")
-    vh_mean = alt.Chart(vh_records).mark_line(color="red").transform_filter(selection).\
-        transform_window(rolling_mean="mean(value)", frame=[-5, 5]).encode(x='datetime:T', y='rolling_mean:Q')
+    # define function to make charts
+    def chart_maker(pol_records, axis_label, domain, selection, title):
+        """
+        Creates charts from subset of dataframe records and combines them into one
 
-    # NDVI charts
-    ndvi_chart = alt.Chart(ndvi_records).mark_circle().encode(
-        x=alt.X("datetime:T", axis=alt.Axis(title='Date', titleFontSize=22), scale=alt.Scale(domain=list(domain_pd))),
-        y=alt.Y("value", axis=alt.Axis(title=y_axis_label_ndvi, titleFontSize=22)),
-        color=alt.condition(selection, "acquisition", alt.value("lightgray"), sort=["D"]),
-        opacity=alt.condition(selection, alt.value(1), alt.value(0.2))).add_selection(selection).\
-        properties(title="NDVI", width=1000, height=500)
-    ndvi_loess = alt.Chart(ndvi_records).encode(
-        x=alt.X("datetime:T", axis=alt.Axis(title='Date', titleFontSize=22), scale=alt.Scale(domain=list(domain_pd))),
-        y=alt.Y("value", axis=alt.Axis(title=y_axis_label_ndvi, titleFontSize=22))).transform_filter(selection).\
-        transform_loess("datetime", "value").mark_line(color="red")
-    ndvi_mean = alt.Chart(ndvi_records).mark_line(color="red").transform_filter(selection).\
-        transform_window(rolling_mean="mean(value)", frame=[-5, 5]).encode(x='datetime:T', y='rolling_mean:Q')
+        :param pol_records: subset of records with one polarisation/value (VV,VH,NDVI)
+        :param axis_label: string with y-axis label
+        :param domain: boundaries for x-axis (start and end date)
+        :param selection: dataframe column by which data points are colored
+        :param title: string with chart title
+        :return: chart with either VV/VH/NDVI values (and trend line if selected)
+        """
+        value_chart = alt.Chart(pol_records).mark_circle().encode(
+            x=alt.X("datetime:T", axis=alt.Axis(title='Date', titleFontSize=22),
+                    scale=alt.Scale(domain=list(domain))),
+            y=alt.Y("value", axis=alt.Axis(title=axis_label, titleFontSize=22)),
+            color=alt.condition(selection, "acquisition", alt.value("lightgray"), sort=["D"]),
+            opacity=alt.condition(selection, alt.value(1), alt.value(0.2))).add_selection(selection). \
+            properties(title=title, width=1000, height=500)
+        loess_chart = alt.Chart(pol_records).encode(
+            x=alt.X("datetime:T", axis=alt.Axis(title='Date', titleFontSize=22),
+                    scale=alt.Scale(domain=list(domain))),
+            y=alt.Y("value", axis=alt.Axis(title=axis_label, titleFontSize=22))).transform_filter(selection). \
+            transform_loess("datetime", "value").mark_line(color="red")
+        mean_chart = alt.Chart(pol_records).mark_line(color="red").transform_filter(selection). \
+            transform_window(rolling_mean="mean(value)", frame=[-5, 5]).encode(x='datetime:T', y='rolling_mean:Q')
 
-    # add trend line type to charts based on user selection
-    if stat_button == "LOESS":
-        vv_chart = vv_chart + vv_loess
-        vh_chart = vh_chart + vh_loess
-        ndvi_chart = ndvi_chart + ndvi_loess
+        if stat_button == "LOESS":
+            final_chart = value_chart + loess_chart
+        elif stat_button == "Rolling Mean":
+            final_chart = value_chart + mean_chart
+        else:
+            final_chart = value_chart
 
-    elif stat_button == "Rolling Mean":
-        vv_chart = vv_chart + vv_mean
-        vh_chart = vh_chart + vh_mean
-        ndvi_chart = ndvi_chart + ndvi_mean
+        return final_chart
 
-    # define function for list of charts to be displayed
+    # make charts for parameters
+    vv_chart = chart_maker(vv_records, y_axis_label_db, domain_pd, color_selection, vv_title)
+    vh_chart = chart_maker(vh_records, y_axis_label_db, domain_pd, color_selection, vh_title)
+    ndvi_chart = chart_maker(ndvi_records, y_axis_label_ndvi, domain_pd, color_selection, ndvi_title)
+
+    # define function that fills list of charts to be displayed
     chart_list = []
 
     def chart_collector(vv_vh_ndvi, vv_vh_ndvi_chart):
@@ -260,9 +253,9 @@ elif db_path.endswith(".db"):
         Fills list with chart if the corresponding parameter was selected and is available,
         returns warning if not.
 
-        Parameters:
-           vv_vh_ndvi (str): Polarisation or NDVI
-           vv_vh_ndvi_chart (altair.chart): chart displaying VV/VH/NDVI values
+        :param vv_vh_ndvi: parameter (VV,VH,NDVI)
+        :param vv_vh_ndvi_chart: chart made with chart_maker function
+        :return: warning if na data is available for selected parameter
         """
         if vv_vh_ndvi in param_selection:
             if records["parameter"].str.contains(vv_vh_ndvi).any():
