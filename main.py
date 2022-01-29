@@ -286,7 +286,7 @@ def main_part(db):
     end_date = records["datetime"].max()
 
     # set domain containing earliest and latest date in df, used as boundaries for x-axis of charts
-    domain_pd = pd.to_datetime([start_date, end_date]).astype(int) / 10 ** 6
+    domain_pd = pd.to_datetime([start_date, end_date]).view("int64") / 10 ** 6
 
     # set y-axis label based on selected statistic
     if stat_selection in ["mean", "median", "std", "mode_value_1"]:
