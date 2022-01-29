@@ -16,12 +16,12 @@ import altair as alt
 # set app page layout
 st.set_page_config(layout="wide")
 
-# permanent database path can be defined here to avoid path query within the app on every app start
-# if you want to keep the app query functionality (default), please do not change the path variable
+# !!! permanent database path can be defined here to avoid path query within the app on every app start !!!
+# !!! if you want to keep the app query functionality (default), please do not change the path variable !!!
 permanent_db_path = "Enter path here"
 
 
-# function for connection to database
+# define function for establishing connection to database
 def db_connect(db_path):
     """
     Tries connection to database, prints error if unsuccessful
@@ -37,7 +37,7 @@ def db_connect(db_path):
         print("Error while connecting to Database", error)
 
 
-# function to get path to database from user and check if path is valid
+# define function to get path to database from user and check if path is valid
 def db_path_query(permanent_db_path):
     """
     Checks if permanent databse path is valid. If not, it sets a prompt in the app that queries the path from user.
@@ -75,7 +75,7 @@ def placeholders(multiselections):
 
 
 # define function to make charts
-def chart_maker(pol_records, axis_label, domain, selection, title, stat_button):
+def make_charts(pol_records, axis_label, domain, selection, title, stat_button):
     """
     Creates charts from subset of dataframe records and combines them into one
 
@@ -112,8 +112,8 @@ def chart_maker(pol_records, axis_label, domain, selection, title, stat_button):
     return final_chart
 
 
-# define function to fill list of charts to display
-def chart_collector(vv_vh_ndvi, vv_vh_ndvi_chart, param_selection, records, chart_list):
+# define function to fill list of charts that will be displayed
+def collect_charts(vv_vh_ndvi, vv_vh_ndvi_chart, param_selection, records, chart_list):
     """
     Fills list with chart if the corresponding parameter was selected and is available,
     returns warning if not.
@@ -133,21 +133,22 @@ def chart_collector(vv_vh_ndvi, vv_vh_ndvi_chart, param_selection, records, char
             return st.warning(param_warning)
 
 
-# define function for main page of app
+# define function for deploying main page of app
 def main_part(db):
     """
-    Deploys the main page of the app, including interactive data filters and visualisations (charts)
+    Deploys the main page of the app and its functionalities. This includes defining the data filters,
+    querying the filtered data from the database, and displaying charts of the data in the app.
 
     :param db: connection to database
     :return: streamlit app functionalities (filters, charts)
     """
-    # create app title and description
+    # print app title and description
     st.title('Radar Crop Monitor App')
     st.markdown('This app can be used to display SAR parameters and NDVI values for crop monitoring.')
     st.markdown("Please select the main and dependent filter first. Note that displaying the data may take some time.")
     st.markdown('#')
 
-    # create titles for data filters
+    # print titles for data filters in app
     st.sidebar.title("Filters")
     st.sidebar.markdown("#")
     st.sidebar.header('Main Filters')
@@ -168,6 +169,7 @@ def main_part(db):
     crop_selection = st.sidebar.selectbox("Crop Type", crop_types)
     stat_selection = st.sidebar.selectbox("Statistic", stats)
 
+    # print title for dependent filters in app
     st.sidebar.markdown('#')
     st.sidebar.header('Dependent Filters')
 
@@ -177,12 +179,12 @@ def main_part(db):
     param_selection = tuple(st.sidebar.multiselect("Parameter", parameter))
     fid_selection = tuple(st.sidebar.multiselect("FID", fid))
 
-    # print data source and contributors
+    # print data source and contributors in app
     st.sidebar.markdown("#")
     st.sidebar.markdown("Data Source: ESA Copernicus-Data")
     st.sidebar.markdown("Contributors: Markus Adam, Laura Walder")
 
-    # list of multiselection tuples
+    # define list of multiselection tuples
     dependent_selections = [acq_selection, product_selection, param_selection, fid_selection]
 
     # apply placeholder function to multiselection tuples
@@ -299,18 +301,18 @@ def main_part(db):
     vh_title = "VH Polarisation"
     ndvi_title = "NDVI"
 
-    # make charts for parameters
-    vv_chart = chart_maker(vv_records, y_axis_label_db, domain_pd, color_selection, vv_title, stat_button)
-    vh_chart = chart_maker(vh_records, y_axis_label_db, domain_pd, color_selection, vh_title, stat_button)
-    ndvi_chart = chart_maker(ndvi_records, y_axis_label_ndvi, domain_pd, color_selection, ndvi_title, stat_button)
+    # apply function to make charts
+    vv_chart = make_charts(vv_records, y_axis_label_db, domain_pd, color_selection, vv_title, stat_button)
+    vh_chart = make_charts(vh_records, y_axis_label_db, domain_pd, color_selection, vh_title, stat_button)
+    ndvi_chart = make_charts(ndvi_records, y_axis_label_ndvi, domain_pd, color_selection, ndvi_title, stat_button)
 
-    # define function that fills list of charts to be displayed
+    # define list that will be filled with charts to be displayed
     chart_list = []
 
     # apply function to fill chart list
-    chart_collector("VV", vv_chart, param_selection, records, chart_list)
-    chart_collector("VH", vh_chart, param_selection, records, chart_list)
-    chart_collector("NDVI", ndvi_chart, param_selection, records, chart_list)
+    collect_charts("VV", vv_chart, param_selection, records, chart_list)
+    collect_charts("VH", vh_chart, param_selection, records, chart_list)
+    collect_charts("NDVI", ndvi_chart, param_selection, records, chart_list)
 
     # display charts from list
     for chart in chart_list:
@@ -320,7 +322,9 @@ def main_part(db):
     db.close()
 
 
+# establish connection to database
 db = db_path_query(permanent_db_path)
 
+# deploy main part of the app if connection to database is established
 if db:
     main_part(db)
