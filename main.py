@@ -31,16 +31,17 @@ def db_connect(db_path):
     """
     try:
         database = sqlite3.connect(db_path)
-        print("Successfully Connected to SQLite Database")
-        return database
+        table_names = pd.read_sql_query("SELECT * FROM sqlite_master WHERE type='table'", database)
+        return database, table_names
     except sqlite3.Error as error:
-        print("Error while connecting to Database", error)
+        connection_error = "Error while connecting to database:" + str(error)
+        st.error(connection_error)
 
 
 # define function to get path to database from user and check if path is valid
 def db_path_query(permanent_db_path):
     """
-    Checks if permanent databse path is valid. If not, it sets a prompt in the app that queries the path from user.
+    Checks if permanent database path is valid. If not, it sets a prompt in the app that queries the path from user.
 
     :param permanent_db_path: permanent database path that can be set by user in this script. Default: "Enter path here"
     :return: connection to database
@@ -49,11 +50,14 @@ def db_path_query(permanent_db_path):
         text_input_container = st.empty()
         path = text_input_container.text_input("Please enter path to database: ")
         if path != "" and path.endswith(".db") is False:
-            st.error("Entered path does not contain a database")
+            st.error("Entered path does not contain a valid database")
         elif path.endswith(".db"):
-            database = db_connect(path)
-            text_input_container.empty()
-            return database
+            database, table_names = db_connect(path)
+            if table_names.empty:
+                st.error("Entered path does not contain a valid database")
+            else:
+                text_input_container.empty()
+                return database
     elif permanent_db_path.endswith(".db"):
         database = db_connect(permanent_db_path)
         return database
@@ -241,7 +245,7 @@ def main_part(db):
     # print warning when no filter is selected and error when invalid filter combination (with no data) is selected
     if records.empty:
         if any(len(x) == 0 for x in dependent_selections):
-            st.warning("No selection has been made. Please select filter combinations.")
+            st.warning("No selection has been made. Please select filter combination.")
         else:
             st.error("No data is available for this filter combination. Please select other filter combinations.")
 
