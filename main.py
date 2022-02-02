@@ -1,9 +1,9 @@
 """
-Script for displaying graphs of SAR parameters and NDVI values from a database in a streamlit web app
+Script for displaying graphs of SAR parameters and NDVI values from a database in a streamlit web app.
 
 Authors: Markus Adam, Laura Walder
 Date created: 13/10/2021
-Date last modified: 09/01/2022
+Date last modified: 02/02/2022
 Python version: 3.8
 """
 # import packages
@@ -24,10 +24,11 @@ permanent_db_path = "Enter path here"
 # define function for establishing connection to database
 def db_connect(db_path):
     """
-    Tries connection to database, prints error if unsuccessful
+    Tries connecting to database & gets dataframe of all table names (which will be empty if database path is invalid),
+    prints error if connection is unsuccessful.
 
     :param db_path: path to database file
-    :return: connection to database
+    :return: connection to database, dataframe with table names
     """
     try:
         database = sqlite3.connect(db_path)
@@ -41,7 +42,9 @@ def db_connect(db_path):
 # define function to get path to database from user and check if path is valid
 def db_path_query(permanent_db_path):
     """
-    Checks if permanent database path is valid. If not, it sets a prompt in the app that queries the path from user.
+    First checks if permanent database path has been set. If yes, it checks if this path is valid and tries
+    connecting to database. If no, it queries path from user in the app and tries connection with entered path.
+    Path validity is checked by checking path ending (must be ".db") and table_names (which is empty if path is invalid)
 
     :param permanent_db_path: permanent database path that can be set by user in this script. Default: "Enter path here"
     :return: connection to database
@@ -58,9 +61,15 @@ def db_path_query(permanent_db_path):
             else:
                 text_input_container.empty()
                 return database
-    elif permanent_db_path.endswith(".db"):
-        database = db_connect(permanent_db_path)
-        return database
+    else:
+        if permanent_db_path.endswith(".db"):
+            database, table_names = db_connect(permanent_db_path)
+            if table_names.empty:
+                st.error("Permanent database path does not contain a valid database")
+            else:
+                return database
+        else:
+            st.error("Permanent database path does not contain a valid database")
 
 
 # function to add placeholder to multiselection tuple if len == 1 (prevents syntax error in sql query)
@@ -123,7 +132,7 @@ def collect_charts(vv_vh_ndvi, vv_vh_ndvi_chart, param_selection, records, chart
     returns warning if not.
 
     :param vv_vh_ndvi: parameter (VV,VH,NDVI)
-    :param vv_vh_ndvi_chart: chart made with chart_maker() function
+    :param vv_vh_ndvi_chart: chart made with make_charts() function
     :param param_selection: parameters (VV/VH/NDVI) selected by user
     :param records: dataframe with data that will be displayed
     :param chart_list: list o charts to be displayed
@@ -157,7 +166,7 @@ def main_part(db):
     st.sidebar.markdown("#")
     st.sidebar.header('Main Filters')
 
-    # load unique values from specific table columns of db to use as selectable values (main and dependent filters)
+    # load unique values from specific table columns of db to use as selectable values for main and dependent filters
     aoi_names = pd.read_sql_query('select distinct aoi from areaofinterest;', db)
     years = pd.read_sql_query("select distinct year from areaofinterest;", db)
     crop_types = pd.read_sql_query("select distinct crop_type from croplegend;", db)
@@ -249,7 +258,7 @@ def main_part(db):
         else:
             st.error("No data is available for this filter combination. Please select other filter combinations.")
 
-    # define expander box for time slider and trendline selection
+    # define expander box which will contain time slider and trendline selection functionalities
     expander = st.expander("Date Range and Trendline Filter", expanded=True)
 
     # create sliders for date range selection (start and end date of x-axis of charts)
@@ -292,7 +301,7 @@ def main_part(db):
     # set domain containing earliest and latest date in df, used as boundaries for x-axis of charts
     domain_pd = pd.to_datetime([start_date, end_date]).view("int64") / 10 ** 6
 
-    # set y-axis label based on selected statistic
+    # set y-axis label based on user-selected statistic
     if stat_selection in ["mean", "median", "std", "mode_value_1"]:
         y_axis_label_db = "Backscatter [dB]"
         y_axis_label_ndvi = "NDVI value"
