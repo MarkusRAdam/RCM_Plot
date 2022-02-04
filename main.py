@@ -136,7 +136,7 @@ def collect_charts(vv_vh_ndvi, vv_vh_ndvi_chart, param_selection, records, chart
     :param param_selection: parameters (VV/VH/NDVI) selected by user
     :param records: dataframe with data that will be displayed
     :param chart_list: list o charts to be displayed
-    :return: warning if na data is available for selected parameter
+    :return: warning if no data is available for selected parameter
     """
     if vv_vh_ndvi in param_selection:
         if records["parameter"].str.contains(vv_vh_ndvi).any():
@@ -162,9 +162,9 @@ def main_part(db):
     st.markdown('#')
 
     # print titles for data filters in app
-    st.sidebar.title("Filters")
+    st.sidebar.title("Filter")
     st.sidebar.markdown("#")
-    st.sidebar.header('Main Filters')
+    st.sidebar.header('Main Filter')
 
     # load unique values from specific table columns of db to use as selectable values for main and dependent filters
     aoi_names = pd.read_sql_query('select distinct aoi from areaofinterest;', db)
@@ -184,7 +184,7 @@ def main_part(db):
 
     # print title for dependent filters in app
     st.sidebar.markdown('#')
-    st.sidebar.header('Dependent Filters')
+    st.sidebar.header('Dependent Filter')
 
     # get tuples of multiselections (dependent filters) from user
     acq_selection = tuple(st.sidebar.multiselect("Acquisition Mode", acq_types))
