@@ -13,12 +13,20 @@ import sqlite3
 import altair as alt
 
 # C:/Users/Markus Adam/Studium/GEO419/students_db_sql_queries/students_db_sql_queries/RCM_work.db
-# set app page layout
-st.set_page_config(layout="wide")
 
-# !!! permanent database path can be defined here to avoid path query within the app on every app start !!!
-# !!! if you want to keep the app query functionality (default), please do not change the path variable !!!
-permanent_db_path = "Enter path here"
+# permanent database path can be defined in set_permanent_db_path() to avoid path query within the
+# app on every app start.
+# if you want to keep the app query functionality (default), please do not change the path variable !!!
+
+
+# define function to set permanent database path
+def set_permanent_db_path():
+    """
+    Defines permanent path to database. Default "Enter path here" leads to path query in the web app.
+    :return: string with default or database path
+    """
+    permanent_db_path = "Enter path here"
+    return permanent_db_path
 
 
 # define function for establishing connection to database
@@ -37,39 +45,6 @@ def db_connect(db_path):
     except sqlite3.Error as error:
         connection_error = "Error while connecting to database:" + str(error)
         st.error(connection_error)
-
-
-# define function to get path to database from user and check if path is valid
-def db_path_query(permanent_db_path):
-    """
-    First checks if permanent database path has been set. If yes, it checks if this path is valid and tries
-    connecting to database. If no, it queries path from user in the app and tries connection with entered path.
-    Path validity is checked by checking path ending (must be ".db") and table_names (which is empty if path is invalid)
-
-    :param permanent_db_path: permanent database path that can be set by user in this script. Default: "Enter path here"
-    :return: connection to database
-    """
-    if permanent_db_path == "Enter path here":
-        text_input_container = st.empty()
-        path = text_input_container.text_input("Please enter path to database: ")
-        if path != "" and path.endswith(".db") is False:
-            st.error("Entered path does not contain a valid database")
-        elif path.endswith(".db"):
-            database, table_names = db_connect(path)
-            if table_names.empty:
-                st.error("Entered path does not contain a valid database")
-            else:
-                text_input_container.empty()
-                return database
-    else:
-        if permanent_db_path.endswith(".db"):
-            database, table_names = db_connect(permanent_db_path)
-            if table_names.empty:
-                st.error("Permanent database path does not contain a valid database")
-            else:
-                return database
-        else:
-            st.error("Permanent database path does not contain a valid database")
 
 
 # function to add placeholder to multiselection tuple if len == 1 (prevents syntax error in sql query)
@@ -335,9 +310,39 @@ def main_part(db):
     db.close()
 
 
-# establish connection to database
-db = db_path_query(permanent_db_path)
+# define function to get path to database from user, check if path is valid and deploy main app page
+def db_path_query():
+    """
+    First checks if permanent database path has been set. If yes, it checks if this path is valid and tries
+    connecting to database. If no, it queries path from user in the app and tries connection with entered path.
+    Path validity is checked by checking path ending (must be ".db") and table_names (which is empty if path is invalid)
+    After connection with valid path is established, the main web app page/functionality is deployed.
+    """
+    permanent_db_path = set_permanent_db_path()
+    if permanent_db_path == "Enter path here":
+        st.set_page_config(layout="wide")
+        text_input_container = st.empty()
+        path = text_input_container.text_input("Please enter path to database: ")
+        if path != "" and path.endswith(".db") is False:
+            st.error("Entered path does not contain a valid database")
+        elif path.endswith(".db"):
+            database, table_names = db_connect(path)
+            if table_names.empty:
+                st.error("Entered path does not contain a valid database")
+            else:
+                text_input_container.empty()
+                main_part(database)
+    else:
+        if permanent_db_path.endswith(".db"):
+            database, table_names = db_connect(permanent_db_path)
+            if table_names.empty:
+                st.error("Permanent database path does not contain a valid database")
+            else:
+                st.set_page_config(layout="wide")
+                main_part(database)
+        else:
+            st.error("Permanent database path does not contain a valid database")
 
-# deploy main part of the app if connection to database is established
-if db:
-    main_part(db)
+
+if __name__ == "__main__":
+    db_path_query()
