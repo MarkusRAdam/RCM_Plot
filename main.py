@@ -14,9 +14,9 @@ import altair as alt
 
 # C:/Users/Markus Adam/Studium/GEO419/students_db_sql_queries/students_db_sql_queries/RCM_work.db
 
-# permanent database path can be defined in set_permanent_db_path() to avoid path query within the
+# Permanent database path can be defined in set_permanent_db_path() to avoid path query within the
 # app on every app start.
-# if you want to keep the app query functionality (default), please do not change the path variable !!!
+# If you want to keep the app query functionality (default), please do not change the path variable!
 
 
 # define function to set permanent database path
@@ -63,7 +63,7 @@ def placeholders(multiselections):
 
 
 # define function to make charts
-def make_charts(pol_records, axis_label, domain, selection, title, stat_button):
+def make_chart(pol_records, axis_label, domain, selection, title, stat_button):
     """
     Creates charts from subset of dataframe records and combines them into one
 
@@ -101,7 +101,7 @@ def make_charts(pol_records, axis_label, domain, selection, title, stat_button):
 
 
 # define function to fill list of charts that will be displayed
-def collect_charts(vv_vh_ndvi, records, chart):
+def display_chart(vv_vh_ndvi, records, chart):
     """
     Displays chart in app if the corresponding parameter was selected and is available,
     returns warning if not.
@@ -285,17 +285,17 @@ def main_part(db):
     for param in param_selection:
         if param == "VV":
             vv_records = records[records["parameter"] == "VV"]
-            vv_chart = make_charts(vv_records, y_axis_label_db, domain_pd, color_selection, vv_title, stat_button)
-            collect_charts("VV", records, vv_chart)
+            vv_chart = make_chart(vv_records, y_axis_label_db, domain_pd, color_selection, vv_title, stat_button)
+            display_chart("VV", records, vv_chart)
         if param == "VH":
             vh_records = records[records["parameter"] == "VH"]
-            vh_chart = make_charts(vh_records, y_axis_label_db, domain_pd, color_selection, vh_title, stat_button)
-            collect_charts("VH", records, vh_chart)
+            vh_chart = make_chart(vh_records, y_axis_label_db, domain_pd, color_selection, vh_title, stat_button)
+            display_chart("VH", records, vh_chart)
         if param == "NDVI":
             ndvi_records = records[records["parameter"] == "NDVI"]
-            ndvi_chart = make_charts(ndvi_records, y_axis_label_ndvi, domain_pd, color_selection, ndvi_title,
+            ndvi_chart = make_chart(ndvi_records, y_axis_label_ndvi, domain_pd, color_selection, ndvi_title,
                                      stat_button)
-            collect_charts("NDVI", records, ndvi_chart)
+            display_chart("NDVI", records, ndvi_chart)
 
     # close connection to db
     db.close()
