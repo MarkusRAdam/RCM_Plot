@@ -1,5 +1,5 @@
 """
-Script for displaying graphs of SAR parameters and NDVI values from a database in a streamlit web app.
+Script for displaying time series of Radar backscatter and NDVI values from a database in a streamlit web app.
 
 Authors: Markus Adam, Laura Walder
 Date created: 13/10/2021
@@ -47,10 +47,10 @@ def db_connect(db_path):
         st.error(connection_error)
 
 
-# function to add placeholder to multiselection tuple if len == 1 (prevents syntax error in sql query)
+# define function to add placeholder to multiselection tuple if len == 1 (prevents syntax error in sql query)
 def placeholders(multiselections):
     """
-    Adds placeholder string to tuples if their length is 1. This prevents a syntax error in the sql query
+    Adds placeholder string to tuples if their length is 1. This prevents a syntax error in the sql query.
 
     :param multiselections: tuple with user-selected multiselection filter values
     :return: tuple with filter values and optional placeholder
@@ -65,7 +65,8 @@ def placeholders(multiselections):
 # define function to make charts
 def make_chart(pol_records, axis_label, domain, selection, title, stat_button):
     """
-    Creates charts from subset of dataframe records and combines them into one
+    Creates scatterplot and trendline diagrams from subset of dataframe records.
+    Trendline is added to scatterplot if selected by user.
 
     :param pol_records: subset of records with one polarisation/value (VV,VH,NDVI)
     :param axis_label: string with y-axis label
@@ -104,7 +105,7 @@ def make_chart(pol_records, axis_label, domain, selection, title, stat_button):
 def display_chart(vv_vh_ndvi, records, chart):
     """
     Displays chart in app if the corresponding parameter was selected and is available,
-    returns warning if not.
+    returns warning if parameter was selected but is not available.
 
     :param vv_vh_ndvi: parameter (VV,VH,NDVI)
     :param records: dataframe with data that will be displayed
@@ -125,7 +126,7 @@ def main_part(db):
     querying the filtered data from the database, and displaying charts of the data in the app.
 
     :param db: connection to database
-    :return: streamlit app functionalities (filters, charts)
+    :return: no return in script, but deploys streamlit app functionalities (filters, charts)
     """
     # print app title and description
     st.title('Radar Crop Monitor App')
@@ -238,11 +239,11 @@ def main_part(db):
     # convert datetime string column to datetime
     records["datetime"] = pd.to_datetime(records['datetime']).apply(lambda x: x.date())
 
-    # get earliest and latest date from df as boundaries for slider
+    # get earliest and latest date from dataframe as boundaries for slider
     start_date = records["datetime"].min()
     end_date = records["datetime"].max()
 
-    # define slider values from user selection and filter df based on these values
+    # define slider values from user selection and filter dataframe based on these values
     try:
         expander.subheader("Select date range")
         slider_1, slider_2 = expander.slider('', value=(start_date, end_date), format="DD.MM.YY")
@@ -258,14 +259,14 @@ def main_part(db):
 
     # create charts (scatterplots and trendlines (LOESS/Rolling mean)) for VV, VH and NDVI values
 
-    # set df column by which points are colored in charts
+    # set dataframe column by which points are colored in charts
     color_selection = alt.selection_multi(fields=['acquisition'], bind='legend')
 
-    # get earliest and latest date again from now date-filtered df
+    # get earliest and latest date again from now date-filtered dataframe
     start_date = records["datetime"].min()
     end_date = records["datetime"].max()
 
-    # set domain containing earliest and latest date in df, used as boundaries for x-axis of charts
+    # set domain containing earliest and latest date in dataframe, used as boundaries for x-axis of charts
     domain_pd = pd.to_datetime([start_date, end_date]).view("int64") / 10 ** 6
 
     # set y-axis label based on user-selected statistic
@@ -281,7 +282,8 @@ def main_part(db):
     vh_title = "VH Polarisation"
     ndvi_title = "NDVI"
 
-    # go through selected parameters and make/display corresponding charts, if data is available
+    # go through selected parameters, create dataframe subset with parameter
+    # and make/display corresponding charts, if data is available
     for param in param_selection:
         if param == "VV":
             vv_records = records[records["parameter"] == "VV"]
@@ -294,7 +296,7 @@ def main_part(db):
         if param == "NDVI":
             ndvi_records = records[records["parameter"] == "NDVI"]
             ndvi_chart = make_chart(ndvi_records, y_axis_label_ndvi, domain_pd, color_selection, ndvi_title,
-                                     stat_button)
+                                    stat_button)
             display_chart("NDVI", records, ndvi_chart)
 
     # close connection to db
