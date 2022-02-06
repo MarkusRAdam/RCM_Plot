@@ -101,24 +101,21 @@ def make_charts(pol_records, axis_label, domain, selection, title, stat_button):
 
 
 # define function to fill list of charts that will be displayed
-def collect_charts(vv_vh_ndvi, vv_vh_ndvi_chart, param_selection, records, chart_list):
+def collect_charts(vv_vh_ndvi, records, chart):
     """
-    Fills list with chart if the corresponding parameter was selected and is available,
+    Displays chart in app if the corresponding parameter was selected and is available,
     returns warning if not.
 
     :param vv_vh_ndvi: parameter (VV,VH,NDVI)
-    :param vv_vh_ndvi_chart: chart made with make_charts() function
-    :param param_selection: parameters (VV/VH/NDVI) selected by user
     :param records: dataframe with data that will be displayed
-    :param chart_list: list o charts to be displayed
+    :param chart: chart displaying values with vv_vh_ndvi parameter
     :return: warning if no data is available for selected parameter
     """
-    if vv_vh_ndvi in param_selection:
-        if records["parameter"].str.contains(vv_vh_ndvi).any():
-            chart_list.append(vv_vh_ndvi_chart)
-        elif records.empty is False:
-            param_warning = "No data available for parameter {}".format(vv_vh_ndvi)
-            return st.warning(param_warning)
+    if records["parameter"].str.contains(vv_vh_ndvi).any():
+        st.altair_chart(chart.configure_title(fontSize=28).configure_legend(titleFontSize=20, labelFontSize=18))
+    elif records.empty is False:
+        param_warning = "No data available for parameter {}".format(vv_vh_ndvi)
+        return st.warning(param_warning)
 
 
 # define function for deploying main page of app
@@ -261,11 +258,6 @@ def main_part(db):
 
     # create charts (scatterplots and trendlines (LOESS/Rolling mean)) for VV, VH and NDVI values
 
-    # get subsets of df by filtering by polarisation/value for different charts
-    vv_records = records[records["parameter"] == "VV"]
-    vh_records = records[records["parameter"] == "VH"]
-    ndvi_records = records[records["parameter"] == "NDVI"]
-
     # set df column by which points are colored in charts
     color_selection = alt.selection_multi(fields=['acquisition'], bind='legend')
 
@@ -289,22 +281,21 @@ def main_part(db):
     vh_title = "VH Polarisation"
     ndvi_title = "NDVI"
 
-    # apply function to make charts
-    vv_chart = make_charts(vv_records, y_axis_label_db, domain_pd, color_selection, vv_title, stat_button)
-    vh_chart = make_charts(vh_records, y_axis_label_db, domain_pd, color_selection, vh_title, stat_button)
-    ndvi_chart = make_charts(ndvi_records, y_axis_label_ndvi, domain_pd, color_selection, ndvi_title, stat_button)
-
-    # define list that will be filled with charts to be displayed
-    chart_list = []
-
-    # apply function to fill chart list
-    collect_charts("VV", vv_chart, param_selection, records, chart_list)
-    collect_charts("VH", vh_chart, param_selection, records, chart_list)
-    collect_charts("NDVI", ndvi_chart, param_selection, records, chart_list)
-
-    # display charts from list
-    for chart in chart_list:
-        st.altair_chart(chart.configure_title(fontSize=28).configure_legend(titleFontSize=20, labelFontSize=18))
+    # go through selected parameters and make/display corresponding charts, if data is available
+    for param in param_selection:
+        if param == "VV":
+            vv_records = records[records["parameter"] == "VV"]
+            vv_chart = make_charts(vv_records, y_axis_label_db, domain_pd, color_selection, vv_title, stat_button)
+            collect_charts("VV", records, vv_chart)
+        if param == "VH":
+            vh_records = records[records["parameter"] == "VH"]
+            vh_chart = make_charts(vh_records, y_axis_label_db, domain_pd, color_selection, vh_title, stat_button)
+            collect_charts("VH", records, vh_chart)
+        if param == "NDVI":
+            ndvi_records = records[records["parameter"] == "NDVI"]
+            ndvi_chart = make_charts(ndvi_records, y_axis_label_ndvi, domain_pd, color_selection, ndvi_title,
+                                     stat_button)
+            collect_charts("NDVI", records, ndvi_chart)
 
     # close connection to db
     db.close()
