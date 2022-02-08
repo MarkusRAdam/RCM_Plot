@@ -16,13 +16,15 @@ import altair as alt
 
 # Permanent database path can be defined in set_permanent_db_path() to avoid path query within the
 # app on every app start.
-# If you want to keep the app query functionality (default), please do not change the path variable!
+# If you want to keep the app query functionality (default), please do not change permanent_db_path!
 
 
 # define function to set permanent database path
 def set_permanent_db_path():
     """
     Defines permanent path to database. Default "Enter path here" leads to path query in the web app.
+    If default is replaced with valid database path, the path query will be avoided (main app page opens directly).
+
     :return: string with default or database path
     """
     permanent_db_path = "Enter path here"
@@ -35,8 +37,8 @@ def db_connect(db_path):
     Tries connecting to database & gets dataframe of all table names (which will be empty if database path is invalid),
     prints error if connection is unsuccessful.
 
-    :param db_path: path to database file
-    :return: connection to database, dataframe with table names
+    :param db_path: string with path to database file
+    :return: sqlite3.Connection object with connection to database, dataframe with table names
     """
     try:
         database = sqlite3.connect(db_path)
@@ -65,16 +67,17 @@ def placeholders(multiselections):
 # define function to make charts
 def make_chart(pol_records, axis_label, domain, selection, title, stat_button):
     """
-    Creates scatterplot and trendline diagrams from subset of dataframe records.
+    Creates scatterplot and trendline diagrams (based on LOESS or Rolling Mean) of VV/VH/NDVI values
+    from respective subset of dataframe "records".
     Trendline is added to scatterplot if selected by user.
 
-    :param pol_records: subset of records with one polarisation/value (VV,VH,NDVI)
+    :param pol_records: subset of dataframe "records" with one polarisation/value (VV,VH,NDVI)
     :param axis_label: string with y-axis label
-    :param domain: boundaries for x-axis (start and end date)
+    :param domain: numpy.ndarray with boundaries for x-axis (start and end date)
     :param selection: dataframe column by which data points are colored
     :param title: string with chart title
-    :param stat_button: name of trendline selected by user
-    :return: chart with either VV/VH/NDVI values (and trend line if selected)
+    :param stat_button: string with mane of trendline selected by user
+    :return: altair.Chart object displaying either VV/VH/NDVI values (and trend line if selected)
     """
     value_chart = alt.Chart(pol_records).mark_circle().encode(
         x=alt.X("datetime:T", axis=alt.Axis(title='Date', titleFontSize=22),
@@ -104,12 +107,12 @@ def make_chart(pol_records, axis_label, domain, selection, title, stat_button):
 # define function to fill list of charts that will be displayed
 def display_chart(vv_vh_ndvi, records, chart):
     """
-    Displays chart in app if the corresponding parameter was selected and is available,
+    Displays chart in app if the corresponding parameter was selected by user and is available,
     returns warning if parameter was selected but is not available.
 
-    :param vv_vh_ndvi: parameter (VV,VH,NDVI)
+    :param vv_vh_ndvi: string with parameter (VV,VH,NDVI)
     :param records: dataframe with data that will be displayed
-    :param chart: chart displaying values with vv_vh_ndvi parameter
+    :param chart: altair.Chart object displaying values with vv_vh_ndvi parameter
     :return: warning if no data is available for selected parameter
     """
     if records["parameter"].str.contains(vv_vh_ndvi).any():
@@ -122,10 +125,13 @@ def display_chart(vv_vh_ndvi, records, chart):
 # define function for deploying main page of app
 def main_part(db):
     """
-    Deploys the main page of the app and its functionalities. This includes defining the data filters,
-    querying the filtered data from the database, and displaying charts of the data in the app.
+    Deploys the main page of the app and its functionalities. This mainly includes:
+    * setting app title and description
+    * getting and displaying available data filter values from database, then getting filter selections from user
+    * querying data as dataframe from database, based on filter values selected by user
+    * making charts based on queried dataframe and deploying them
 
-    :param db: connection to database
+    :param db: sqlite3.Connection object with connection to database
     :return: no return in script, but deploys streamlit app functionalities (filters, charts)
     """
     # print app title and description
