@@ -109,4 +109,3 @@ dependencies:
     - webencodings==0.5.1
     - widgetsnbextension==3.5.2
     - zipp==3.7.0
-prefix: C:\anaconda\envs\RCM_Plot
