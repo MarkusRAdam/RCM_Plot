@@ -79,6 +79,7 @@ def make_chart(pol_records, axis_label, domain, selection, title, stat_button):
     :param stat_button: string with mane of trendline selected by user
     :return: altair.Chart object displaying either VV/VH/NDVI values (and trend line if selected)
     """
+    # make the base chart (scatterplot with x=time, y=value)
     value_chart = alt.Chart(pol_records).mark_circle().encode(
         x=alt.X("datetime:T", axis=alt.Axis(title='Date', titleFontSize=22),
                 scale=alt.Scale(domain=list(domain))),
@@ -86,14 +87,19 @@ def make_chart(pol_records, axis_label, domain, selection, title, stat_button):
         color=alt.condition(selection, "acquisition", alt.value("lightgray"), sort=["D"]),
         opacity=alt.condition(selection, alt.value(1), alt.value(0.2))).add_selection(selection). \
         properties(title=title, width=1000, height=500)
+
+    # make LOESS trendline chart
     loess_chart = alt.Chart(pol_records).encode(
         x=alt.X("datetime:T", axis=alt.Axis(title='Date', titleFontSize=22),
                 scale=alt.Scale(domain=list(domain))),
         y=alt.Y("value", axis=alt.Axis(title=axis_label, titleFontSize=22))).transform_filter(selection). \
         transform_loess("datetime", "value").mark_line(color="red")
+
+    # make Rolling Mean trendline chart (mean of 10 values)
     mean_chart = alt.Chart(pol_records).mark_line(color="red").transform_filter(selection). \
         transform_window(rolling_mean="mean(value)", frame=[-5, 5]).encode(x='datetime:T', y='rolling_mean:Q')
 
+    # add trendline to scatterplot, if selected
     if stat_button == "LOESS":
         final_chart = value_chart + loess_chart
     elif stat_button == "Rolling Mean":
@@ -115,8 +121,11 @@ def display_chart(vv_vh_ndvi, records, chart):
     :param chart: altair.Chart object displaying values with vv_vh_ndvi parameter
     :return: warning if no data is available for selected parameter
     """
+
+    # if data with parameter is available
     if records["parameter"].str.contains(vv_vh_ndvi).any():
         st.altair_chart(chart.configure_title(fontSize=28).configure_legend(titleFontSize=20, labelFontSize=18))
+    # if selection has been made, but no data with parameter available
     elif records.empty is False:
         param_warning = "No data available for parameter {}".format(vv_vh_ndvi)
         return st.warning(param_warning)
@@ -145,7 +154,7 @@ def main_part(db):
     st.sidebar.markdown("#")
     st.sidebar.header('Main Filter')
 
-    # load unique values from specific table columns of db to use as selectable values for main and dependent filters
+    # query unique values from specific table columns of db to use as selectable values for main and dependent filters
     aoi_names = pd.read_sql_query('select distinct aoi from areaofinterest;', db)
     years = pd.read_sql_query("select distinct year from areaofinterest;", db)
     crop_types = pd.read_sql_query("select distinct crop_type from croplegend;", db)
@@ -186,7 +195,7 @@ def main_part(db):
     fid_selection = placeholders(fid_selection)
 
     # define sql body for query, with filter selections as variables
-    sql = f"""SELECT 
+    sql_body = f"""SELECT 
         round(s1.value, 2) as value, 
         s1.mask_label, 
         s1.unit, 
@@ -228,7 +237,7 @@ def main_part(db):
         ORDER BY s1.mask_label, s1.datetime  ASC; """
 
     # apply sql query and load resulting table as dataframe
-    records = pd.read_sql(sql, db)
+    records = pd.read_sql(sql_body, db)
 
     # print warning when no filter is selected and error when invalid filter combination (with no data) is selected
     if records.empty:
@@ -237,10 +246,10 @@ def main_part(db):
         else:
             st.error("No data is available for this filter combination. Please select other filter combinations.")
 
-    # define expander box which will contain time slider and trendline selection functionalities
+    # define expander box which will contain time slider and radiobuttons for trendline selection
     expander = st.expander("Date Range and Trendline Filter", expanded=True)
 
-    # create sliders for date range selection (start and end date of x-axis of charts)
+    # create time slider for date range selection (start and end date of x-axis of charts)
 
     # convert datetime string column to datetime
     records["datetime"] = pd.to_datetime(records['datetime']).apply(lambda x: x.date())
@@ -257,7 +266,7 @@ def main_part(db):
     except KeyError:
         expander.warning("Date range slider is only available after a valid filter combination has been selected")
 
-    # make button for selection of trend line type
+    # make button for selection of trendline type
     expander.markdown("#")
     expander.subheader("Select trendline")
     stat_button = expander.radio("", ("None", "LOESS", "Rolling Mean"))
@@ -265,17 +274,17 @@ def main_part(db):
 
     # create charts (scatterplots and trendlines (LOESS/Rolling mean)) for VV, VH and NDVI values
 
-    # set dataframe column by which points are colored in charts
+    # set dataframe column by which points are colored in charts (acquisition: ascending/descending)
     color_selection = alt.selection_multi(fields=['acquisition'], bind='legend')
 
-    # get earliest and latest date again from now date-filtered dataframe
+    # get earliest and latest date again from potentially time-filtered dataframe
     start_date = records["datetime"].min()
     end_date = records["datetime"].max()
 
     # set domain containing earliest and latest date in dataframe, used as boundaries for x-axis of charts
     domain_pd = pd.to_datetime([start_date, end_date]).view("int64") / 10 ** 6
 
-    # set y-axis label based on user-selected statistic
+    # set y-axis label based on user-selected statistic (which can be in units or absolute values)
     if stat_selection in ["mean", "median", "std", "mode_value_1"]:
         y_axis_label_db = "Backscatter [dB]"
         y_axis_label_ndvi = "NDVI value"
@@ -312,12 +321,18 @@ def main_part(db):
 # define function to get path to database from user, check if path is valid and deploy main app page
 def db_path_query():
     """
-    First checks if permanent database path has been set. If yes, it checks if this path is valid and tries
-    connecting to database. If no, it queries path from user in the app and tries connection with entered path.
-    Path validity is checked by checking path ending (must be ".db") and table_names (which is empty if path is invalid)
-    After connection with valid path is established, the main web app page/functionality is deployed.
+    First checks if permanent database path has been set in set_permanent_db_path().
+    If yes, it checks if this path is valid and tries connecting to database with db_connect().
+    If no, it queries path from user in the app and tries connection with entered path.
+    Path validity is checked by checking path ending (must be ".db") and
+    table_names (which is empty if path is invalid).
+    After connection with valid path is established, the main web app page/functionality
+    is deployed by executing main_part().
     """
+    # get permanent database path (or default string)
     permanent_db_path = set_permanent_db_path()
+
+    # if path has not been set in script (= default)
     if permanent_db_path == "Enter path here":
         st.set_page_config(layout="wide")
         text_input_container = st.empty()
@@ -331,6 +346,8 @@ def db_path_query():
             else:
                 text_input_container.empty()
                 main_part(database)
+
+    # if path has been set in script
     else:
         if permanent_db_path.endswith(".db"):
             database, table_names = db_connect(permanent_db_path)
