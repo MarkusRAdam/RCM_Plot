@@ -49,6 +49,40 @@ def db_connect(db_path):
         st.error(connection_error)
 
 
+def replace_strings(string_list, string_dict):
+    """
+    Can be used to convert list of strings in two ways:
+    * searching if keys from dictionary are in list and replacing them with corresponding values
+    * searching if values from dictionary are in list and replacing them with corresponding keys
+
+    Direction of conversion is chosen automatically depending on whether keys or values from dictionary are in list
+
+    :param string_list: list of strings
+    :param string_dict: dictionary where keys and values are strings
+    :return: potentially updated list of strings
+    """
+
+    updated_string_list = string_list.copy()
+
+    # search for dict keys in input list and replace them with corresponding values
+    for string in string_dict.keys():
+        if string in updated_string_list:
+            updated_string_list = [w.replace(string, string_dict.get(string)) for w in updated_string_list]
+
+    # if keys have been found and replaced, new list differs from input list
+    if updated_string_list != string_list:
+        return updated_string_list
+
+    # if no change occurred, search for values and replace them with corresponding keys
+    else:
+        for string in string_dict.values():
+            if string in updated_string_list:
+                matching_key_list = [key for key, value in string_dict.items() if value == string]
+                matching_key = matching_key_list[0]
+                updated_string_list = [w.replace(string, matching_key) for w in updated_string_list]
+        return updated_string_list
+
+
 # define function to add placeholder to multiselection tuple if len == 1 (prevents syntax error in sql query)
 def placeholders(multiselections):
     """
@@ -154,18 +188,30 @@ def main_part(db):
     st.sidebar.markdown("#")
     st.sidebar.header('Main Filter')
 
+    # define dict of filter values that need to be converted from abbreviations to full words
+    string_dict = {"DEMM": "Demmin", "FRIEN": "Frienstedt", "MRKN": "Markneukirchen",
+                   "A": "Ascending", "D": "Descending"}
+
     # query unique values from specific table columns of db to use as selectable values for main and dependent filters
+    # abbreviated values (in aoi/acquisition) are converted to full words with replace_strings()
     aoi_names = pd.read_sql_query('select distinct aoi from areaofinterest;', db)
+    aoi_names = aoi_names["aoi"].tolist()
+    aoi_names = replace_strings(aoi_names, string_dict)
     years = pd.read_sql_query("select distinct year from areaofinterest;", db)
     crop_types = pd.read_sql_query("select distinct crop_type from croplegend;", db)
     products = pd.read_sql_query("select distinct product from s1fieldstatistic;", db)
     acq_types = pd.read_sql_query("select distinct acquisition from s1fieldstatistic;", db)
+    acq_types = acq_types["acquisition"].tolist()
+    acq_types = replace_strings(acq_types, string_dict)
     parameter = pd.read_sql_query("select distinct polarization from s1fieldstatistic;", db)
     stats = pd.read_sql_query("select distinct statistic from s1fieldstatistic;", db)
     fid = pd.read_sql_query("select distinct fid from areaofinterest;", db)
 
     # get single value selections of main filters from user
-    aoi_selection = st.sidebar.selectbox("AOI", aoi_names)
+    # full words (in aoi) are converted back to abbreviations for sql query
+    aoi_selection = [st.sidebar.selectbox("AOI", aoi_names)]
+    aoi_selection = replace_strings(aoi_selection, string_dict)
+    aoi_selection = aoi_selection[0]
     year_selection = st.sidebar.selectbox("Year", years)
     crop_selection = st.sidebar.selectbox("Crop Type", crop_types)
     stat_selection = st.sidebar.selectbox("Statistic", stats)
@@ -175,7 +221,10 @@ def main_part(db):
     st.sidebar.header('Dependent Filter')
 
     # get tuples of multiselections (dependent filters) from user
-    acq_selection = tuple(st.sidebar.multiselect("Acquisition Mode", acq_types))
+    # full words (in acquisition) are converted back to abbreviations for sql query
+    acq_selection = st.sidebar.multiselect("Acquisition Mode", acq_types)
+    acq_selection = replace_strings(acq_selection, string_dict)
+    acq_selection = tuple(acq_selection)
     product_selection = tuple(st.sidebar.multiselect("Product", products))
     param_selection = tuple(st.sidebar.multiselect("Parameter", parameter))
     fid_selection = tuple(st.sidebar.multiselect("FID", fid))
@@ -274,6 +323,9 @@ def main_part(db):
 
     # create charts (scatterplots and trendlines (LOESS/Rolling mean)) for VV, VH and NDVI values
 
+    # remap acquisition values from abbreviations (A/D) to full words (ascending/descending)
+    records["acquisition"] = records["acquisition"].map({"A": "ascending", "D": "descending"})
+
     # set dataframe column by which points are colored in charts (acquisition: ascending/descending)
     color_selection = alt.selection_multi(fields=['acquisition'], bind='legend')
 
@@ -336,7 +388,7 @@ def db_path_query():
     if permanent_db_path == "Enter path here":
         st.set_page_config(layout="wide")
         text_input_container = st.empty()
-        path = text_input_container.text_input("Please enter path to database: ")
+        path = text_input_container.text_input("Please enter path to database (including file name): ")
         if path != "" and path.endswith(".db") is False:
             st.error("Entered path does not contain a valid database")
         elif path.endswith(".db"):
