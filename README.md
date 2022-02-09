@@ -28,6 +28,8 @@ The web app should now open automatically in your default browser.
 If you are not using Anaconda, you have to manually install the packages that are imported in main.py and then run the script as described above.
 <br>
 
-## Web app features
+## Web-App Features
+![final filters](https://user-images.githubusercontent.com/80339685/153172627-82026a71-5e7f-4008-8328-531f109a6935.jpg)
+
 
 ## Documentation
