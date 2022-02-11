@@ -1,5 +1,5 @@
 # RCM_Plot
-This python tool can be used to run a web app that displays time series plots of Radar backscatter and NDVI values from a database. It was developed to work with a specific SQLite database containing data from the Radar Crop Monitor project. 
+This python tool can be used to run a streamlit web app that displays time series plots of Radar backscatter and NDVI values from a database. It was developed to work with a specific database containing data from the Radar Crop Monitor project. 
 
 ## Installation
 ### With Anaconda
@@ -25,7 +25,7 @@ The web app should now open automatically in your default browser.
 <br>
 
 ### Without Anaconda
-If you are not using Anaconda, you have to manually install the packages that are imported in main.py and then run the script as described above.
+If you are not using Anaconda, you have to manually install the packages that are imported in main.py (except sqlite3) and then run the script as described above.
 <br>
 
 ## Web-App Features
