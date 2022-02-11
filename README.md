@@ -4,12 +4,12 @@ This python tool can be used to run a web app that displays time series plots of
 ## Installation
 ### With Anaconda
 If you are using Anaconda you can use the provided environment.yml file to set up a virtual environment in which the main script can be run. 
+By default, the created environment will be named "RCM_Plot". You can change the name in the environment.yml file before setting up the environment.
 
 Open the Anaconda prompt, make sure the environment.yml is in the specified directory, and enter the following:
 ```
 conda env create -f environment.yml
 ```
-By default, the created environment will be named "RCM_Plot". You can change the name in the environment.yml file before setting up the environment.
 
 Activate the created environment by entering:
 ```
