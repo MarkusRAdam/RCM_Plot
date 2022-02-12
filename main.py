@@ -99,7 +99,7 @@ def placeholders(multiselections):
 
 
 # define function to make charts
-def make_chart(pol_records, axis_label, domain, selection, title, stat_button):
+def make_chart(pol_records, axis_label, domain, selection, color_column, sort, title, stat_button):
     """
     Creates scatterplot and trendline diagrams (based on LOESS or Rolling Mean) of VV/VH/NDVI values
     from respective subset of dataframe "records".
@@ -118,7 +118,8 @@ def make_chart(pol_records, axis_label, domain, selection, title, stat_button):
         x=alt.X("datetime:T", axis=alt.Axis(title='Date', titleFontSize=22),
                 scale=alt.Scale(domain=list(domain))),
         y=alt.Y("value", axis=alt.Axis(title=axis_label, titleFontSize=22)),
-        color=alt.condition(selection, "acquisition", alt.value("lightgray"), sort=["D"]),
+        color=alt.condition(selection, color_column, alt.value("lightgray"), sort=sort,
+                            legend=alt.Legend(type='symbol')),
         opacity=alt.condition(selection, alt.value(1), alt.value(0.2))).add_selection(selection). \
         properties(title=title, width=1000, height=500)
 
@@ -295,9 +296,6 @@ def main_part(db):
         else:
             st.error("No data is available for this filter combination. Please select other filter combinations.")
 
-    # define expander box which will contain time slider and radiobuttons for trendline selection
-    expander = st.expander("Date Range and Trendline Filter", expanded=True)
-
     # create time slider for date range selection (start and end date of x-axis of charts)
 
     # convert datetime string column to datetime
@@ -307,18 +305,30 @@ def main_part(db):
     start_date = records["datetime"].min()
     end_date = records["datetime"].max()
 
-    # define slider values from user selection and filter dataframe based on these values
-    try:
-        expander.subheader("Select date range")
-        slider_1, slider_2 = expander.slider('', value=(start_date, end_date), format="DD.MM.YY")
-        records = records[(records['datetime'] >= slider_1) & (records['datetime'] <= slider_2)]
-    except KeyError:
-        expander.warning("Date range slider is only available after a valid filter combination has been selected")
+    st.markdown("#")
 
-    # make button for selection of trendline type
-    expander.markdown("#")
-    expander.subheader("Select trendline")
-    stat_button = expander.radio("", ("None", "LOESS", "Rolling Mean"))
+    # define expander box which will contain time slider and radiobuttons for trendline and coloring selection
+    with st.expander("Additional filter", expanded=True):
+
+        # define slider values from user selection and filter dataframe based on these values
+        try:
+            st.subheader("Select date range")
+            slider_1, slider_2 = st.slider('', value=(start_date, end_date), format="DD.MM.YY")
+            records = records[(records['datetime'] >= slider_1) & (records['datetime'] <= slider_2)]
+        except KeyError:
+            st.warning("Date range slider is only available after a valid filter combination has been selected")
+
+        # make columns for trendline/fid selection buttons
+        col1, col2 = st.columns(2)
+
+        # make button for selection of trendline type
+        col1.subheader("Select trendline")
+        stat_button = col1.radio("", ("None", "LOESS", "Rolling Mean"))
+
+        # make button for selection of coloring column
+        col2.subheader("Select coloring")
+        color_button = col2.radio("", ("FID", "Acquisiton"))
+
     st.markdown("#")
 
     # create charts (scatterplots and trendlines (LOESS/Rolling mean)) for VV, VH and NDVI values
@@ -326,8 +336,15 @@ def main_part(db):
     # remap acquisition values from abbreviations (A/D) to full words (ascending/descending)
     records["acquisition"] = records["acquisition"].map({"A": "ascending", "D": "descending"})
 
-    # set dataframe column by which points are colored in charts (acquisition: ascending/descending)
-    color_selection = alt.selection_multi(fields=['acquisition'], bind='legend')
+    # set dataframe column by which points are colored in charts (acquisition or FID)
+    if color_button == "FID":
+        color_selection = alt.selection_multi(fields=['fid'], bind='legend')
+        color_column = "fid"
+        sort = [fid_selection[1]]
+    else:
+        color_selection = alt.selection_multi(fields=['acquisition'], bind='legend')
+        color_column = "acquisition"
+        sort = ["D"]
 
     # get earliest and latest date again from potentially time-filtered dataframe
     start_date = records["datetime"].min()
@@ -354,15 +371,18 @@ def main_part(db):
     for param in param_selection:
         if param == "VV":
             vv_records = records[records["parameter"] == "VV"]
-            vv_chart = make_chart(vv_records, y_axis_label_db, domain_pd, color_selection, vv_title, stat_button)
+            vv_chart = make_chart(vv_records, y_axis_label_db, domain_pd, color_selection,
+                                  color_column, sort, vv_title, stat_button)
             display_chart("VV", records, vv_chart)
         if param == "VH":
             vh_records = records[records["parameter"] == "VH"]
-            vh_chart = make_chart(vh_records, y_axis_label_db, domain_pd, color_selection, vh_title, stat_button)
+            vh_chart = make_chart(vh_records, y_axis_label_db, domain_pd, color_selection,
+                                  color_column, sort, vh_title, stat_button)
             display_chart("VH", records, vh_chart)
         if param == "NDVI":
             ndvi_records = records[records["parameter"] == "NDVI"]
-            ndvi_chart = make_chart(ndvi_records, y_axis_label_ndvi, domain_pd, color_selection, ndvi_title,
+            ndvi_chart = make_chart(ndvi_records, y_axis_label_ndvi, domain_pd, color_selection,
+                                    color_column, sort, ndvi_title,
                                     stat_button)
             display_chart("NDVI", records, ndvi_chart)
 
