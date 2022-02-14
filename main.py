@@ -120,7 +120,8 @@ def make_chart(pol_records, axis_label, domain, selection, color_column, sort, t
         y=alt.Y("value", axis=alt.Axis(title=axis_label, titleFontSize=22)),
         color=alt.condition(selection, color_column, alt.value("lightgray"), sort=sort,
                             legend=alt.Legend(type='symbol')),
-        opacity=alt.condition(selection, alt.value(1), alt.value(0.2))).add_selection(selection). \
+        opacity=alt.condition(selection, alt.value(1), alt.value(0.2)),
+        tooltip=("fid", "acquisition")).add_selection(selection). \
         properties(title=title, width=1000, height=500)
 
     # make LOESS trendline chart
@@ -340,7 +341,7 @@ def main_part(db):
     if color_button == "FID":
         color_selection = alt.selection_multi(fields=['fid'], bind='legend')
         color_column = "fid"
-        sort = [fid_selection[1]]
+        sort = None
     else:
         color_selection = alt.selection_multi(fields=['acquisition'], bind='legend')
         color_column = "acquisition"
