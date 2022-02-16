@@ -109,6 +109,8 @@ def make_chart(pol_records, axis_label, domain, selection, color_column, sort, t
     :param axis_label: string with y-axis label
     :param domain: numpy.ndarray with boundaries for x-axis (start and end date)
     :param selection: dataframe column by which data points are colored
+    :param color_column: dataframe column by which data points are colored in chart
+    :param sort: list with order of values in chart legend
     :param title: string with chart title
     :param stat_button: string with mane of trendline selected by user
     :return: altair.Chart object displaying either VV/VH/NDVI values (and trend line if selected)
@@ -121,7 +123,7 @@ def make_chart(pol_records, axis_label, domain, selection, color_column, sort, t
         color=alt.condition(selection, color_column, alt.value("lightgray"), sort=sort,
                             legend=alt.Legend(type='symbol')),
         opacity=alt.condition(selection, alt.value(1), alt.value(0.2)),
-        tooltip=("fid", "acquisition")).add_selection(selection). \
+        tooltip=("fid", "acquisition", "product")).add_selection(selection). \
         properties(title=title, width=1000, height=500)
 
     # make LOESS trendline chart
@@ -319,6 +321,8 @@ def main_part(db):
         except KeyError:
             st.warning("Date range slider is only available after a valid filter combination has been selected")
 
+        st.markdown("#")
+
         # make columns for trendline/fid selection buttons
         col1, col2 = st.columns(2)
 
@@ -327,7 +331,7 @@ def main_part(db):
         stat_button = col1.radio("", ("None", "LOESS", "Rolling Mean"))
 
         # make button for selection of coloring column
-        col2.subheader("Select coloring")
+        col2.subheader("Select data point coloring")
         color_button = col2.radio("", ("FID", "Acquisiton"))
 
     st.markdown("#")
