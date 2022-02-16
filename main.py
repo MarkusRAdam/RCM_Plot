@@ -332,7 +332,7 @@ def main_part(db):
 
         # make button for selection of coloring column
         col2.subheader("Select data point coloring")
-        color_button = col2.radio("", ("FID", "Acquisiton"))
+        color_button = col2.radio("", ("by FID", "by Acquisiton Mode"))
 
     st.markdown("#")
 
@@ -342,7 +342,7 @@ def main_part(db):
     records["acquisition"] = records["acquisition"].map({"A": "ascending", "D": "descending"})
 
     # set dataframe column by which points are colored in charts (acquisition or FID)
-    if color_button == "FID":
+    if color_button == "by FID":
         color_selection = alt.selection_multi(fields=['fid'], bind='legend')
         color_column = "fid"
         sort = None
