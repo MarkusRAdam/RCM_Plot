@@ -108,11 +108,11 @@ def make_chart(pol_records, axis_label, domain, selection, color_column, sort, t
     :param pol_records: subset of dataframe "records" with one polarisation/value (VV,VH,NDVI)
     :param axis_label: string with y-axis label
     :param domain: numpy.ndarray with boundaries for x-axis (start and end date)
-    :param selection: dataframe column by which data points are colored
+    :param selection: altair.selection_multi object with values that will be colored (bound to selection in chart legend) 
     :param color_column: dataframe column by which data points are colored in chart
     :param sort: list with order of values in chart legend
     :param title: string with chart title
-    :param stat_button: string with mane of trendline selected by user
+    :param stat_button: string with name of trendline selected by user
     :return: altair.Chart object displaying either VV/VH/NDVI values (and trend line if selected)
     """
     # make the base chart (scatterplot with x=time, y=value)
@@ -176,7 +176,7 @@ def main_part(db):
     * setting app title and description
     * getting and displaying available data filter values from database, then getting filter selections from user
     * querying data as dataframe from database, based on filter values selected by user
-    * making charts based on queried dataframe and deploying them
+    * making and displaying charts based on queried dataframe
 
     :param db: sqlite3.Connection object with connection to database
     :return: no return in script, but deploys streamlit app functionalities (filters, charts)
