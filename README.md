@@ -29,6 +29,8 @@ If you are not using Anaconda, you have to manually install the packages that ar
 <br>
 
 ## Web-App Features
+By default, the app starts with an interface in which the path to the database has to be entered. You can bypass this interface by setting a permanent path in main.py. The app will then start directly with the main page.
+<br>
 ![final filters](https://user-images.githubusercontent.com/80339685/153172627-82026a71-5e7f-4008-8328-531f109a6935.jpg)
 
 
