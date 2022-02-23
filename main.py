@@ -38,7 +38,7 @@ def db_connect(db_path):
     prints error if connection is unsuccessful.
 
     :param db_path: string with path to database file
-    :return: sqlite3.Connection object with connection to database, dataframe with table names
+    :return: sqlite3.Connection object with connection to database, dataframe with database table names
     """
     try:
         database = sqlite3.connect(db_path)
@@ -86,7 +86,7 @@ def replace_strings(string_list, string_dict):
 # define function to add placeholder to multiselection tuple if len == 1 (prevents syntax error in sql query)
 def placeholders(multiselections):
     """
-    Adds placeholder string to tuples if their length is 1. This prevents a syntax error in the sql query.
+    Adds placeholder string to tuples of filter values if their length is 1. This prevents a syntax error in the sql query.
 
     :param multiselections: tuple with user-selected multiselection filter values
     :return: tuple with filter values and optional placeholder
@@ -108,7 +108,7 @@ def make_chart(pol_records, axis_label, domain, selection, color_column, sort, t
     :param pol_records: subset of dataframe "records" with one polarisation/value (VV,VH,NDVI)
     :param axis_label: string with y-axis label
     :param domain: numpy.ndarray with boundaries for x-axis (start and end date)
-    :param selection: altair.selection_multi object with values that will be colored (bound to selection in chart legend) 
+    :param selection: altair.selection_multi object with values that will be colored (bound to user selection in chart legend) 
     :param color_column: dataframe column by which data points are colored in chart
     :param sort: list with order of values in chart legend
     :param title: string with chart title
