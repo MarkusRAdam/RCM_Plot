@@ -2,9 +2,9 @@
 Script for displaying time series of Radar backscatter and NDVI values from a database in a streamlit web app.
 
 Authors: Markus Adam, Laura Walder
-Date created: 13/10/2021
-Date last modified: 02/02/2022
-Python version: 3.8
+|  Date created: 13/10/2021
+|  Date last modified: 23/02/2022
+|  Python version: 3.8
 """
 # import packages
 import streamlit as st
@@ -52,10 +52,10 @@ def db_connect(db_path):
 def replace_strings(string_list, string_dict):
     """
     Can be used to convert list of strings in two ways:
-    * searching if keys from dictionary are in list and replacing them with corresponding values
-    * searching if values from dictionary are in list and replacing them with corresponding keys
+        - searching if keys from dictionary are in list and replacing them with corresponding values
+        - searching if values from dictionary are in list and replacing them with corresponding keys
 
-    Direction of conversion is chosen automatically depending on whether keys or values from dictionary are in list
+    Direction of conversion is chosen automatically depending on whether keys or values from dictionary are in list.
 
     :param string_list: list of strings
     :param string_dict: dictionary where keys and values are strings
@@ -173,10 +173,10 @@ def display_chart(vv_vh_ndvi, records, chart):
 def main_part(db):
     """
     Deploys the main page of the app and its functionalities. This mainly includes:
-    * setting app title and description
-    * getting and displaying available data filter values from database, then getting filter selections from user
-    * querying data as dataframe from database, based on filter values selected by user
-    * making and displaying charts based on queried dataframe
+        - setting app title and description
+        - getting and displaying available data filter values from database, then getting filter selections from user
+        - querying data as dataframe from database, based on filter values selected by user
+        - making and displaying charts based on queried dataframe
 
     :param db: sqlite3.Connection object with connection to database
     :return: no return in script, but deploys streamlit app functionalities (filters, charts)
