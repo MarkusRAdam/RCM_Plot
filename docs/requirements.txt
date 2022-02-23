@@ -1,3 +1,4 @@
 streamlit
 pandas
 altair
+sphinx_rtd_theme
