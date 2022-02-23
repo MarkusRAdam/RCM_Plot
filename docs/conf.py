@@ -22,8 +22,8 @@ copyright = '2022, Markus Adam and Laura Walder'
 author = 'Markus Adam and Laura Walder'
 
 # The full version, including alpha/beta/rc tags
-version: = "0.1"
-release = '0.1'
+version: = "1.0"
+release = '1.0.0'
 
 
 # -- General configuration ---------------------------------------------------
