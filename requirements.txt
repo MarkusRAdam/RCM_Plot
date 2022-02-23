@@ -1,4 +1,0 @@
-streamlit
-altair
-pandas
-sqlite3
