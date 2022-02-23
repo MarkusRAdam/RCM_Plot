@@ -50,7 +50,11 @@ autodoc_mock_imports = ["altair", "streamlit", "pandas", "sqlite3"]
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'alabaster'
+import sphinx_rtd_theme
+
+html_theme = 'sphinx_rtd_theme'
+
+html_use_index = True
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
