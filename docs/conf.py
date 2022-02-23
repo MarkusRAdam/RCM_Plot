@@ -43,6 +43,8 @@ exclude_patterns = []
 
 autodoc_mock_imports = ["altair", "streamlit", "pandas", "sqlite3"]
 
+needs_sphinx = "4.4.0"
+
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
