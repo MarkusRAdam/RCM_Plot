@@ -35,3 +35,4 @@ By default, the app starts with an interface in which the path to the database h
 
 
 ## Documentation
+The documentation of the functions can be found [here](https://rcm-plot.readthedocs.io/en/latest/#) 
