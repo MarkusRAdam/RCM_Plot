@@ -1,4 +1,0 @@
-streamlit
-altair
-pandas
-Sphinx==4.0.1
