@@ -12,8 +12,6 @@ import pandas as pd
 import sqlite3
 import altair as alt
 
-# C:/Users/Markus Adam/Studium/GEO419/students_db_sql_queries/students_db_sql_queries/RCM_work.db
-
 # Permanent database path can be defined in set_permanent_db_path() to avoid path query within the
 # app on every app start.
 # If you want to keep the app query functionality (default), please do not change permanent_db_path!
@@ -49,6 +47,7 @@ def db_connect(db_path):
         st.error(connection_error)
 
 
+# define function to replace filter value abbreviations with full words, and vice versa
 def replace_strings(string_list, string_dict):
     """
     Can be used to convert list of strings in two ways:
@@ -73,7 +72,7 @@ def replace_strings(string_list, string_dict):
     if updated_string_list != string_list:
         return updated_string_list
 
-    # if no change occurred, search for values and replace them with corresponding keys
+    # if no change occurred (= no keys to replace found), search for values and replace them with corresponding keys
     else:
         for string in string_dict.values():
             if string in updated_string_list:
@@ -148,7 +147,7 @@ def make_chart(pol_records, axis_label, domain, selection, color_column, sort, t
     return final_chart
 
 
-# define function to fill list of charts that will be displayed
+# define function to display chart if data for corresponding parameter is available
 def display_chart(vv_vh_ndvi, records, chart):
     """
     Displays chart in app if the corresponding parameter was selected by user and is available,
@@ -300,6 +299,8 @@ def main_part(db):
             st.error("No data is available for this filter combination. Please select other filter combinations.")
 
     # create time slider for date range selection (start and end date of x-axis of charts)
+    # as well as selections for trendlines in chart (LOESS/Rolling Mean)
+    # and for data point coloring variable (FID/Acquisition Mode)
 
     # convert datetime string column to datetime
     records["datetime"] = pd.to_datetime(records['datetime']).apply(lambda x: x.date())
@@ -323,7 +324,7 @@ def main_part(db):
 
         st.markdown("#")
 
-        # make columns for trendline/fid selection buttons
+        # make columns for trendline/coloring selection buttons
         col1, col2 = st.columns(2)
 
         # make button for selection of trendline type
@@ -336,12 +337,12 @@ def main_part(db):
 
     st.markdown("#")
 
-    # create charts (scatterplots and trendlines (LOESS/Rolling mean)) for VV, VH and NDVI values
+    # create charts (scatterplots and trendlines) for VV, VH and NDVI values
 
     # remap acquisition values from abbreviations (A/D) to full words (ascending/descending)
     records["acquisition"] = records["acquisition"].map({"A": "ascending", "D": "descending"})
 
-    # set dataframe column by which points are colored in charts (acquisition or FID)
+    # set dataframe column by which points are colored in charts (acquisition or fid, based on user selection)
     if color_button == "by FID":
         color_selection = alt.selection_multi(fields=['fid'], bind='legend')
         color_column = "fid"
@@ -409,7 +410,8 @@ def db_path_query():
     # get permanent database path (or default string)
     permanent_db_path = set_permanent_db_path()
 
-    # if path has not been set in script (= default)
+    # if path has not been set in script (= default):
+    # query path from user in app, check path validity and deploy main_part()
     if permanent_db_path == "Enter path here":
         st.set_page_config(layout="wide")
         text_input_container = st.empty()
@@ -424,7 +426,7 @@ def db_path_query():
                 text_input_container.empty()
                 main_part(database)
 
-    # if path has been set in script
+    # if path has been set in script: check path validity and deploy main_part()
     else:
         if permanent_db_path.endswith(".db"):
             database, table_names = db_connect(permanent_db_path)
