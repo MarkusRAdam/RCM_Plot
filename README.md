@@ -30,7 +30,9 @@ If you are not using Anaconda, you have to manually install the packages that ar
 
 ## Web-App Features
 By default, the app starts with an interface in which the path to the database has to be entered. You can bypass this interface by setting a permanent path in main.py. The app will then start directly with the main page.
+<br>
 The filter combination chosen here as an example, which certainly contains data and thus generates graphs, is as follows:
+<br>
 AOI (FRIEN), Year (2017), Crop Type (Winter Wheat), Statistic (Median), Acquisition Mode (A, D), Product (GRD, S2MSI2A), Parameter (VH, VV, NDVI), FID (4).
 <br>
 
