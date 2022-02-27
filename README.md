@@ -37,7 +37,14 @@ AOI (FRIEN), Year (2017), Crop Type (Winter Wheat), Statistic (Median), Acquisit
 <br>
 
 ![webapp_final](https://user-images.githubusercontent.com/80339685/155840913-adf290b7-96e9-4ce2-bd44-90996c6e3a09.jpg)
+_Resulting Web-App_
 
-
+<br>
+The desired filters can now be set on the left-hand side. 
+<br>
+It is also possible to filter the data set by date using the time slider and to insert statistical trend lines in the graphs. 
+<br>
+The data points can be coloured according to their FID or acquisition, as desired. 
+<br>
 ## Documentation
 The documentation of the functions can be found [here](https://rcm-plot.readthedocs.io/en/latest/#) 
