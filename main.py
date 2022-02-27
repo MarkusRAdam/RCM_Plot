@@ -1,10 +1,11 @@
 """
-Script for displaying time series of Radar backscatter and NDVI values from a database in a streamlit web app.
+This script can be used to run a Streamlit web app that displays time series of Radar backscatter
+and NDVI values from a database. It was developed to work with a specific database from the Radar Crop Monitor project.
 
 Authors: Markus Adam, Laura Walder
 |  Date created: 13/10/2021
-|  Date last modified: 23/02/2022
-|  Python version: 3.8
+|  Date last modified: 27/02/2022
+|  Python version: 3.8  |
 """
 # import packages
 import streamlit as st
@@ -20,8 +21,9 @@ import altair as alt
 # define function to set permanent database path
 def set_permanent_db_path():
     """
-    Defines permanent path to database. Default "Enter path here" leads to path query in the web app.
-    If default is replaced with valid database path, the path query will be avoided (main app page opens directly).
+    Defines a string that can be used to set a permanent path to the database.
+    The default value "Enter path here" leads to path query in the web app.
+    If the default is replaced with valid database path, the path query will be avoided (main app page opens directly).
 
     :return: string with default or database path
     """
@@ -50,7 +52,7 @@ def db_connect(db_path):
 # define function to replace filter value abbreviations with full words, and vice versa
 def replace_strings(string_list, string_dict):
     """
-    Can be used to convert list of strings in two ways:
+    Uses a dictionary to convert a list of strings in two ways:
         - searching if keys from dictionary are in list and replacing them with corresponding values
         - searching if values from dictionary are in list and replacing them with corresponding keys
 
@@ -85,7 +87,8 @@ def replace_strings(string_list, string_dict):
 # define function to add placeholder to multiselection tuple if len == 1 (prevents syntax error in sql query)
 def placeholders(multiselections):
     """
-    Adds placeholder string to tuples of filter values if their length is 1. This prevents a syntax error in the sql query.
+    Adds a string ("placeholder") to a tuple if its length is 1.
+    This is necessary because tuples with length 1 lead to a syntax error when included in a SQL query.
 
     :param multiselections: tuple with user-selected multiselection filter values
     :return: tuple with filter values and optional placeholder
@@ -100,9 +103,14 @@ def placeholders(multiselections):
 # define function to make charts
 def make_chart(pol_records, axis_label, domain, selection, color_column, sort, title, stat_button):
     """
-    Creates scatterplot and trendline diagrams (based on LOESS or Rolling Mean) of VV/VH/NDVI values
-    from respective subset of dataframe "records".
-    Trendline is added to scatterplot if selected by user.
+    Creates scatterplot and trendline diagrams of VV/VH/NDVI values from respective subset of dataframe "records".
+    X axis of scatterplot shows time, while Y axis shows values. Points in the scatterplot are colored
+    based on user selection.
+
+
+    Two types of trendlines are created based on two different statistical methods:
+    Locally Estimated Scatterplot Smoothing (LOESS) and Rolling Mean (with 10 values per mean).
+    One of these trendlines is added to the scatterplot if selected by user.
 
     :param pol_records: subset of dataframe "records" with one polarisation/value (VV,VH,NDVI)
     :param axis_label: string with y-axis label
@@ -150,8 +158,9 @@ def make_chart(pol_records, axis_label, domain, selection, color_column, sort, t
 # define function to display chart if data for corresponding parameter is available
 def display_chart(vv_vh_ndvi, records, chart):
     """
-    Displays chart in app if the corresponding parameter was selected by user and is available,
-    returns warning if parameter was selected but is not available.
+    Displays chart in app if the corresponding parameter was selected by user
+    and if data with this parameter is available in the "records" dataframe.
+    Returns warning if parameter was selected but is not available.
 
     :param vv_vh_ndvi: string with parameter (VV,VH,NDVI)
     :param records: dataframe with data that will be displayed
@@ -159,10 +168,10 @@ def display_chart(vv_vh_ndvi, records, chart):
     :return: warning if no data is available for selected parameter
     """
 
-    # if data with parameter is available
+    # if data with parameter is available:
     if records["parameter"].str.contains(vv_vh_ndvi).any():
         st.altair_chart(chart.configure_title(fontSize=28).configure_legend(titleFontSize=20, labelFontSize=18))
-    # if selection has been made, but no data with parameter available
+    # if selection has been made, but no data with parameter available:
     elif records.empty is False:
         param_warning = "No data available for parameter {}".format(vv_vh_ndvi)
         return st.warning(param_warning)
@@ -401,7 +410,7 @@ def db_path_query():
     """
     First checks if permanent database path has been set in set_permanent_db_path().
     If yes, it checks if this path is valid and tries connecting to database with db_connect().
-    If no, it queries path from user in the app and tries connection with entered path.
+    If no, it queries path from user in the app and tries connection with the entered path.
     Path validity is checked by checking path ending (must be ".db") and
     table_names (which is empty if path is invalid).
     After connection with valid path is established, the main web app page/functionality
