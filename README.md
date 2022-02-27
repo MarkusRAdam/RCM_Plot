@@ -46,5 +46,6 @@ It is also possible to filter the data set by date using the time slider and to 
 <br>
 The data points can be coloured according to their FID or acquisition, as desired. 
 <br>
+
 ## Documentation
 The documentation of the functions can be found [here](https://rcm-plot.readthedocs.io/en/latest/#) 
