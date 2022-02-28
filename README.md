@@ -31,20 +31,20 @@ If you are not using Anaconda, you have to manually install the packages that ar
 ## Web-App Features
 By default, the app starts with an interface in which the path to the database has to be entered. You can bypass this interface by setting a permanent path in main.py. The app will then start directly with the main page.
 <br>
+<br>
+On the main app page, you can use the filters on the left-hand side to select the data that you want to display. Graphs will appear after a full selection has been made (if data is available for this filter combination).   
 The filter combination chosen here as an example, which certainly contains data and thus generates graphs, is as follows:
 <br>
 AOI (FRIEN), Year (2017), Crop Type (Winter Wheat), Statistic (Median), Acquisition Mode (A, D), Product (GRD, S2MSI2A), Parameter (VH, VV, NDVI), FID (4).
 <br>
 
 ![webapp_final](https://user-images.githubusercontent.com/80339685/155840913-adf290b7-96e9-4ce2-bd44-90996c6e3a09.jpg)
-_Resulting Web-App_
+_Resulting Web-App after filter selection_
 
 <br>
-The desired filters can now be set on the left-hand side. 
+It is also possible to filter the data set by date using the time slider and to insert statistical trendlines in the graphs. 
 <br>
-It is also possible to filter the data set by date using the time slider and to insert statistical trend lines in the graphs. 
-<br>
-The data points can be coloured according to their FID or acquisition, as desired. 
+The data points can also be coloured according to their FID or acquisition mode, as desired. 
 <br>
 
 ## Documentation
